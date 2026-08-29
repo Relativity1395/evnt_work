@@ -57,3 +57,4 @@ make
 sudo make install
 
 ```
+To run the script with optical flow filter, comment out "show raw events" line 28
