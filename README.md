@@ -57,4 +57,21 @@ make
 sudo make install
 
 ```
+
+```bash
+sudo apt install -y libopencv-dev python3-opencv
+```
+next go into the group repo and make a build folder
+```bash
+cd evnt_work
+
+mkdir build && cd build
+
+cmake ..
+
+make
+
+./dvxplore_simple
+
+```
 To run the script with optical flow filter, comment out "show raw events" line 28
