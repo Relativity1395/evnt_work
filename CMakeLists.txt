@@ -53,25 +53,25 @@ target_include_directories(dvxplore_core PUBLIC src/)
 # target_link_libraries(dvxplore_viz PUBLIC ${OpenCV_LIBS})
 
 # ── Main executable ───────────────────────────────────────────────────────────
-# add_executable(dvxplore_simple src/dvxplore_simple.cpp)
-add_executable(dvx_drivers src/dvx_drivers.cpp)
+add_executable(dvxplore_simple src/dvxplore_simple.cpp)
+# add_executable(dvx_drivers src/dvx_drivers.cpp)
 
 # The main source is C but links a C++ library; use the C++ linker to pull in
-# # libstdc++ / libm automatically.
-# set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(dvx_drivers PROPERTIES LINKER_LANGUAGE CXX)
+# libstdc++ / libm automatically.
+set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)
+# set_target_properties(dvx_drivers PROPERTIES LINKER_LANGUAGE CXX)
 
-target_include_directories(dvx_drivers PRIVATE
+target_include_directories(dvxplore_simple PRIVATE
     src/
     ${LIBCAER_INCLUDE_DIR}
-    # ${OpenCV_LIBS}
+    ${OpenCV_LIBS}
 )
 
-target_link_libraries(dvx_drivers PRIVATE
+target_link_libraries(dvxplore_simple PRIVATE
     dvxplore_core
     # dvxplore_viz
     ${LIBCAER_LIB}
     pthread
     rt
-    # ${OpenCV_LIBS}
+    ${OpenCV_LIBS}
 )
