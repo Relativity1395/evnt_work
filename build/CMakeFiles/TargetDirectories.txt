@@ -1,4 +1,0 @@
-/home/thomas/evnt_work/build/CMakeFiles/dvxplore_core.dir
-/home/thomas/evnt_work/build/CMakeFiles/dvx_drivers.dir
-/home/thomas/evnt_work/build/CMakeFiles/edit_cache.dir
-/home/thomas/evnt_work/build/CMakeFiles/rebuild_cache.dir

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libdvxplore_core.a CMakeFiles/dvxplore_core.dir/src/event_pack.c.o CMakeFiles/dvxplore_core.dir/src/flow_unpack.c.o
-/usr/bin/ranlib libdvxplore_core.a
