@@ -1,0 +1,1 @@
+/usr/lib/ccache/c++  -O3 -Wall -Wextra CMakeFiles/dvx_drivers.dir/src/dvx_drivers.cpp.o -o dvx_drivers  -Wl,-rpath,/usr/local/lib libdvxplore_core.a /usr/local/lib/libcaer.so -lpthread -lrt 
