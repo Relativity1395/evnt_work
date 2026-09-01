@@ -13,6 +13,8 @@
 #include <iostream>
 #include "dvx_drivers.hpp"
 
+
+
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
     if (signal == SIGTERM || signal == SIGINT) globalShutdown.store(true);
@@ -20,6 +22,28 @@ static void globalShutdownSignalHandler(int signal) {
 static void usbShutdownHandler(void *ptr) {
     (void) ptr;
     globalShutdown.store(true);
+}
+
+coord_t efast(event_t *evnt){
+    uint16_t x = evnt->x;
+    uint16_t y = evnt->y;
+    uint32_t t = evnt->t;
+}
+
+event_t get_events(caerPolarityEventPacket polarity, int j){
+    event_t evnt;
+
+    caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
+    if (!caerPolarityEventIsValid(evt)){
+        exit(EXIT_FAILURE);
+    }
+
+    evnt.x = caerPolarityEventGetX(evt);
+    evnt.y = caerPolarityEventGetY(evt);
+    evnt.p = caerPolarityEventGetPolarity(evt);
+    evnt.t = caerPolarityEventGetTimestamp64(evt, polarity);
+
+    return evnt;
 }
 
 int get_events(void){
@@ -71,22 +95,8 @@ int get_events(void){
 
                 for (int32_t j = 0; j < eventNum; j++) {
                     
-                    event_t evnt;
-                    // memset(t_temp, 0, sizeof(t_temp));
-                    // memset(kernel, 0, sizeof(kernel));
-                    // memset(pol_temp, 0, sizeof(pol_temp));
+                    event_t evnt = get_events(polarity, j);
 
-
-                    caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
-                    if (!caerPolarityEventIsValid(evt)) continue;
-
-                    evnt.x = caerPolarityEventGetX(evt);
-                    evnt.y = caerPolarityEventGetY(evt);
-                    evnt.p = caerPolarityEventGetPolarity(evt);
-                    evnt.t = caerPolarityEventGetTimestamp64(evt, polarity);
-
-                    std::cout << "x position of pixel: " << evnt.x << std::endl;;
-                    std::cout << "y position of pixel: " << evnt.y << std::endl;;
                 }
 
             caerEventPacketContainerFree(packetContainer);
