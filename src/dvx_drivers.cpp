@@ -75,10 +75,11 @@ int main(void){
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
-    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(255, 255, 255));
+    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
 
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
+            canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -111,7 +112,6 @@ int main(void){
                         // std::cout<< "feature position x: " << evnt.x << std::endl;
                         // std::cout<< "feature position y: " << evnt.y << std::endl;
                     }
-                    
                     
                 }
                 
