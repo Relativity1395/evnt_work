@@ -18,15 +18,15 @@ FastDetector::FastDetector(bool connect)
   detector_name_ = "FAST";
 
   // allocate SAE matrices
-  sae_[0] = Eigen::MatrixXd::Zero(sensor_height_, sensor_width_);
-  sae_[1] = Eigen::MatrixXd::Zero(sensor_height_, sensor_width_);
+  sae_[0] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
+  sae_[1] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
 }
 
 FastDetector::~FastDetector()
 {
 }
 
-bool FastDetector::isFeature(event_t e)
+bool FastDetector::isFeature(const event_t& e)
 {
   // update SAE
   const int pol = e.p ? 1 : 0;

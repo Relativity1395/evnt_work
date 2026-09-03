@@ -1,13 +1,16 @@
 #pragma once
 
+#ifndef FAST_DETECTOR_H
+#define FAST_DETECTOR_H
+
 #include <deque>
 
 #include <libcaer/libcaer.h>
-#include "dvx_drivers.hpp"
+#include "../include/dvx_drivers.hpp"
 
 #include <Eigen/Dense>
 
-
+#include "detector.h"
 
 namespace corner_event_detector
 {
@@ -18,7 +21,7 @@ public:
   FastDetector(bool connect = true);
   virtual ~FastDetector();
 
-  bool isFeature(event_t e);
+  virtual bool isFeature(const event_t& e) override;
 
 private:
   // SAE
@@ -35,3 +38,5 @@ private:
 
 
 } // namespace
+
+#endif

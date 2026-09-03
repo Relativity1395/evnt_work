@@ -1,6 +1,9 @@
+
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
+#include <opencv2/opencv.hpp>
+
 
 #include <signal.h>
 #include <atomic>
@@ -11,8 +14,8 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
-#include "dvx_drivers.hpp"
-
+#include "../include/dvx_drivers.hpp"
+#include "../third_party/fast_detector.h"
 
 
 // static std::atomic<bool> globalShutdown(false);
@@ -24,11 +27,7 @@ static void usbShutdownHandler(void *ptr) {
     globalShutdown.store(true);
 }
 
-coord_t efast(event_t *evnt){
-    uint16_t x = evnt->x;
-    uint16_t y = evnt->y;
-    uint32_t t = evnt->t;
-}
+
 
 event_t get_events(caerPolarityEventPacket polarity, int j){
     event_t evnt;
@@ -46,7 +45,7 @@ event_t get_events(caerPolarityEventPacket polarity, int j){
     return evnt;
 }
 
-int get_events(void){
+int main(void){
 #if defined(_WIN32)
     if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
     if (signal(SIGINT,  &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
@@ -75,6 +74,10 @@ int get_events(void){
     caerDeviceDataStart(dvxplr_hndl, NULL, NULL, NULL, &usbShutdownHandler, NULL);
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+    
+    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(255, 255, 255));
+
+    corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
@@ -83,6 +86,10 @@ int get_events(void){
             }
 
             int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+
+            
+            int radius = 1;
+            int thickness = -1;
 
             for (int32_t i = 0; i < packetNum; i++) {
                 caerEventPacketHeader packetHeader =
@@ -97,10 +104,27 @@ int get_events(void){
                     
                     event_t evnt = get_events(polarity, j);
 
-                }
+                    bool feature = detector.isFeature(evnt);
 
-            caerEventPacketContainerFree(packetContainer);
+                    if (feature == true){
+                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 255), thickness);
+                        // std::cout<< "feature position x: " << evnt.x << std::endl;
+                        // std::cout<< "feature position y: " << evnt.y << std::endl;
+                    }
+                    
+                    
+                }
+                
+            
+            
     }
+      caerEventPacketContainerFree(packetContainer);
+
+    // fade the whole canvas toward black so old corners decay
+    canvas *= 0.90;
+
+    cv::imshow("Features", canvas);
+    if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
 
     
 }

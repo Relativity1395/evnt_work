@@ -14,6 +14,11 @@
 
 #ifndef DVX_DRIVERS_H
 #define DVX_DRIVERS_H
+#define WIDTH 640
+#define HEIGHT 480
+
+// uint16_t **sae = (uint16_t**)malloc((WIDTH*HEIGHT)*sizeof(uint16_t*));
+
 
 typedef struct{
     uint16_t x;
@@ -21,6 +26,12 @@ typedef struct{
     uint32_t t;
     bool p;
 }event_t;
+
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+} coord_t;
+
 
 static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal);

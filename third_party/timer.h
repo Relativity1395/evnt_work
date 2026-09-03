@@ -112,4 +112,3 @@ utils::timer_usecs timer;
 auto elapsed_time_usecs = timer.toc();
 
  */
-#endif

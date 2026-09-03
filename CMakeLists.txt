@@ -17,14 +17,11 @@ find_library(LIBCAER_LIB NAMES caer
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3 /home/thomas/eigen)
 
-# add_library(efast third_party/fast_detector.cpp)
-# target_include_directories(efast PUBLIC third_party/ ${EIGEN_INCLUDE_DIR})
-
-add_executable(dvxplore_simple src/dvxplore_simple.cpp third_party/fast_detector.cpp)
+add_executable(dvxplore_simple  src/dvx_drivers.cpp third_party/fast_detector.cpp)
 set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(dvxplore_simple PRIVATE
   src/ ${LIBCAER_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIR})
 
 target_link_libraries(dvxplore_simple PRIVATE
-  efast dvxplore_core ${LIBCAER_LIB} pthread rt ${OpenCV_LIBS} ${EIGEN_LIBS})
+ ${LIBCAER_LIB} pthread rt ${OpenCV_LIBS} ${EIGEN_LIBS})
