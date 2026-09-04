@@ -25,7 +25,7 @@
 // ------------------------------- config -----------------------------------
 // Comment this out to show optical-flow lines only; leave it defined to show
 // raw ON/OFF event pixels only.
-// #define SHOW_RAW_EVENTS
+//#define SHOW_RAW_EVENTS
 
 static constexpr int FRAME_WIDTH  = 640;
 static constexpr int FRAME_HEIGHT = 480;

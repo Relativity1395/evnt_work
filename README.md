@@ -71,6 +71,11 @@ git clone git@github.com:Relativity1395/evnt_work.git
 ## Installing dependancies for git repository
 
 ```bash
+sudo add-apt-repository ppa:inivation-ppa/inivation
+sudo apt-get update
+
+sudo apt-get install libcaer-dev
+
 git clone git@github.com:Relativity1395/evnt_work.git
 
 sudo apt-get install build-essential cmake pkg-config libusb-1.0-0-dev
