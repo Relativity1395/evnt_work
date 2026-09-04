@@ -75,11 +75,11 @@ int main(void){
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
-    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
+    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
 
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
-            canvas.setTo(cv::Scalar(128, 128, 128));
+            canvas.setTo(cv::Scalar(0, 0, 0));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -108,11 +108,15 @@ int main(void){
                     bool feature = detector.isFeature(evnt);
 
                     if (feature == true){
-                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 255), thickness);
+                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
                         // std::cout<< "feature position x: " << evnt.x << std::endl;
                         // std::cout<< "feature position y: " << evnt.y << std::endl;
                     }
-                    
+                    // else if (evnt.p == 1){
+                    // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
+                    // }else{
+                    //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
+                    // }
                 }
                 
             
@@ -121,7 +125,7 @@ int main(void){
       caerEventPacketContainerFree(packetContainer);
 
     // fade the whole canvas toward black so old corners decay
-    canvas *= 0.90;
+    // canvas *= 0.90;
 
     cv::imshow("Features", canvas);
     if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
