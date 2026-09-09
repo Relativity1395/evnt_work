@@ -1,0 +1,79 @@
+# Feature tracking and optical flow for the camera
+
+## Overview
+The first step for obtaining odometry with the event camera is to extract the velocity of moving objects in pixels per second within the 2D frame of the events. 
+
+Why do we use this method?
+1. Correcting feature drift 
+2. Tracking features 
+3. Produce more features from initial eFAST approach
+
+## eFAST algorithm 
+The eFAST corner detection algorithm is a lightweight, low latency corner detector meant for extracting intersecting edges. 
+
+### What is an edge?
+An edge denotes a spaital coordinate where there is multiple consecutive changes in polarity within a certain time threshold. An event denotes a single point that changes in polarity while an edge denotes multiple in a certain time window
+
+### How are they detected using the eFAST algorithm?
+For every event that comes in, two concentric rings are formed around that point where the points are examined if they have fired consecutively, they have formed an edge and corder because it is a circle, so it returns a boolean and the coordinate is recorded
+
+You do not have to understand how the eFAST works because we already have code for it, this is just for simple background knowledge, the only thing to understand is that it returns a boolean and to mark down the coordinate in which it exists. 
+
+## Key Definitions
+Now, the part you have to understand: How do we use the initial feature detection from eFAST to track and make new ones?
+
+We have to first understand a few concepts
+
+### Feature
+As said before, a feature represents an intersecting of edges within a window of firing pixels. These are used to track movement of the events without examining each event itself. This reduces the amount of compute we require with a lighter weight conversion, think of it as organization
+
+### Optical Flow
+Optical flow represents the local gradient of the features in respects to time and the position of the firing events. What this produces is a vector field of the local velocities of the features at each point a feature is created. This is to track where the feature is going in order to detect drift relative to the movement of the camera, and filter out "warped" or "smeared" events and extract what is only moving relative to the camera.
+
+### Landmark
+A landmark represents an arbitrary object in a 3D space that the camera is observing. This is used to model the behavior of the global environment projected onto the camera. There is no deterministic way we can associate the physical landmark in the real world to the one presented in the camera, but we can model it with probability, which we will go over in the next section.
+
+
+## Feature tracking algorithm
+We have the concrete definitions from before, now we need to put them together
+
+### Overview of the Algorithm and Block Diagram
+The sequence of the algorithm is as follows:
+1. eFAST initial feature generation
+2. Initial optical flow estimate and landmark generation
+3. Time window calculation
+4. Probability fitting previous landmark with current optical flow and feature
+5. New optical flow estimate of window
+6. Use new optical flow for step 2 and continue from there until threshold is reached
+
+### Step one: eFAST Initial Feature Generation
+Think of this as a black box: If a feature is discovered with eFAST, we use this as our initial estimate of the feature before detection, we take the coordinates that return from this and use it for tracking
+
+### Step two: Initial Optical Flow estimate and Landmark Generation
+Say for now, we have an optical flow estimate which we can use to generate a landmark. Initially, we take the optical flow to be zero and have it be corrected cycles later, u_0 = 0. We use this flow for landmark generation. This applies when u is nonzero mostly, here is the equation for that:
+
+(insert equation for landmark generation)
+
+The landmark is represented by **l<sub>j</sub><sup>i−1</sup>**, where *i* represents the time window [T<sub>i</sub>, T<sub>i+1</sub>].
+
+*k* is the iterator over the events in window *i*. There are *n<sub>i</sub>* events in each time window *i*, so *k* ranges over 0 … *n<sub>i</sub>*.
+
+*j* is the iterator over the events in the **previous** window. It ranges over 0 … *n<sub>i−1</sub>*.
+
+
+
+
+### Step 3: Time Window Calculation:
+We then calculate, using the current flow, the time window of events we will track the features with using this formula. For initial estimates when u = 0, we take the window size to be 50k events roughly to fill the space then go on from there.
+
+(insert equation to calculate time window)
+
+### Find the Probability that Previous Landmark correlates with current feature
+Now we need to find the probability that the previous landmark correlates with the current flow/feature. This is so we can calculate the new flow and determine how much it deviates from the previous flow, modeled by the gaussian:
+
+(insert picture of equation r_kj)
+
+### Updating Optical Flow
+Once we have everything we need: landmarks, current flow, probability and time window, we can update the optical flow using this equation
+
+
