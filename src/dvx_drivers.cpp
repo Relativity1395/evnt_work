@@ -143,7 +143,7 @@ int main(void){
                         std::cout << "Acceleration in the y direction: " << accelY << std::endl;;
                         std::cout << "Acceleration in the z direction: " << accelZ << std::endl;;
 
-                        std::cout << "gyro x accel: " << gyroX << std::endl;;
+                        std::cout << "gyro x : " << gyroX << std::endl;;
                         std::cout << "gyro y accel: " << gyroY << std::endl;;
                         std::cout << "gyro z accel: " << gyroZ << std::endl;;
                     }
