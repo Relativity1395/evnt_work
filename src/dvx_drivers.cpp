@@ -3,7 +3,7 @@
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
 #include <opencv2/opencv.hpp>
-
+#include <Eigen/Dense>
 
 #include <signal.h>
 #include <atomic>
@@ -27,6 +27,10 @@ static void usbShutdownHandler(void *ptr) {
     globalShutdown.store(true);
 }
 
+
+// int trackFeatures(feature_t feat){
+    
+// }
 
 
 event_t get_events(caerPolarityEventPacket polarity, int j){
@@ -96,7 +100,7 @@ int main(void){
                 caerEventPacketHeader packetHeader =
                     caerEventPacketContainerGetEventPacket(packetContainer, i);
                 if (packetHeader == NULL) continue;
-                if (caerEventPacketHeaderGetEventType(packetHeader) != POLARITY_EVENT) continue;
+                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT){
 
                 caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
                 int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
@@ -117,7 +121,35 @@ int main(void){
                     // }else{
                     //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
                     // }
+                    }
                 }
+                if (caerEventPacketHeaderGetEventType(packetHeader) == IMU6_EVENT){
+                    caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
+                    int32_t numIMU = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    for (int32_t k = 0; k < numIMU; k++){
+                        caerIMU6Event imu = caerIMU6EventPacketGetEvent(imuPacket, k);
+                        if (!caerIMU6EventIsValid(imu)) continue;
+
+                        
+                        float accelX = caerIMU6EventGetAccelX(imu);
+                        float accelY = caerIMU6EventGetAccelY(imu);
+                        float accelZ = caerIMU6EventGetAccelZ(imu);
+
+                        float gyroX = caerIMU6EventGetGyroX(imu);
+                        float gyroY = caerIMU6EventGetGyroY(imu);
+                        float gyroZ = caerIMU6EventGetGyroZ(imu);
+
+                        std::cout << "Acceleration in the x direction: " << accelX << std::endl;;
+                        std::cout << "Acceleration in the y direction: " << accelY << std::endl;;
+                        std::cout << "Acceleration in the z direction: " << accelZ << std::endl;;
+
+                        std::cout << "gyro x accel: " << gyroX << std::endl;;
+                        std::cout << "gyro y accel: " << gyroY << std::endl;;
+                        std::cout << "gyro z accel: " << gyroZ << std::endl;;
+                    }
+
+                    
+                }   
                 
             
             
