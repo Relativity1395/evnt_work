@@ -15,7 +15,7 @@ find_library(LIBCAER_LIB NAMES caer
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/lib)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
-find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3 /home/thomas/eigen)
+find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
 add_executable(dvxplore_simple  src/dvx_drivers.cpp third_party/fast_detector.cpp)
 set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)

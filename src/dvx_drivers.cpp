@@ -2,6 +2,7 @@
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
+#include <libcaer/events/imu6.h>
 #include <opencv2/opencv.hpp>
 
 
@@ -75,11 +76,11 @@ int main(void){
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
-    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
 
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
-            canvas.setTo(cv::Scalar(0, 0, 0));
+            canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -96,10 +97,72 @@ int main(void){
                 caerEventPacketHeader packetHeader =
                     caerEventPacketContainerGetEventPacket(packetContainer, i);
                 if (packetHeader == NULL) continue;
-                if (caerEventPacketHeaderGetEventType(packetHeader) != POLARITY_EVENT) continue;
+                //checking if IMU6 event
+                if (caerEventPacketHeaderGetEventType(packetHeader) == IMU6_EVENT){
+                    caerIMU6EventPacket imuPacket = caerIMU6EventPacketFromPacketHeader(packetHeader);
+                    int32_t imuEventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    for(int32_t j = 0; j < imuEventNum; j++){
+                        //getting each event one by one in the packet
+                        caerIMU6Event imuEvent = caerIMU6EventPacketGetEvent(imuPacket, j);
 
-                caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-                int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                        if(!caerIMU6EventIsValid(imuEvent)){
+                            continue;
+                        }
+                        imu_t imu;
+                        imu.t = caerIMU6EventGetTimestamp64(imuEvent, imuPacket);
+
+                        //setting accel values
+                        imu.accel_x = caerIMU6EventGetAccelX(imuEvent);
+                        imu.accel_y = caerIMU6EventGetAccelY(imuEvent);
+                        imu.accel_z = caerIMU6EventGetAccelZ(imuEvent);
+
+                        //setting gyro values
+                        imu.gyro_x = caerIMU6EventGetGyroX(imuEvent);
+                        imu.gyro_y = caerIMU6EventGetGyroY(imuEvent);
+                        imu.gyro_z = caerIMU6EventGetGyroZ(imuEvent);
+
+                        imu.temperature = caerIMU6EventGetTemp(imuEvent);
+                        //printing the event 
+                        std::cout
+                        << "ACCEL: "
+                        << imu.accel_x << ","
+                        << imu.accel_y << ","
+                        << imu.accel_z
+                        << " | GYRO: "
+                        << imu.gyro_x << ","
+                        << imu.gyro_y << ","
+                        << imu.gyro_z 
+                        << '\n'
+
+
+                    }
+                }
+                    
+                    
+    
+                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT){
+                    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+                    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    for (int32_t j = 0; j < eventNum; j++) {
+                    
+                    event_t evnt = get_events(polarity, j);
+
+                    bool feature = detector.isFeature(evnt);
+
+                    if (feature == true){
+                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
+                        // std::cout<< "feature position x: " << evnt.x << std::endl;
+                        // std::cout<< "feature position y: " << evnt.y << std::endl;
+                    }
+                    // else if (evnt.p == 1){
+                    // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
+                    // }else{
+                    //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
+                    // }
+                
+                }
+            }
+                
 
                 for (int32_t j = 0; j < eventNum; j++) {
                     
