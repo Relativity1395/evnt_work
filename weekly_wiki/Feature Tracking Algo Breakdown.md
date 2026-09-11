@@ -4,15 +4,14 @@
 
 The sequence of the algorithm is as follows:
 
+<img width="821" height="680" alt="image" src="https://github.com/user-attachments/assets/94c29962-10ef-4a0b-8dcc-8e31cf258582" />
+
 1. eFAST initial feature generation
 2. Initial optical flow estimate and landmark generation
 3. Time window calculation
 4. Probability fitting previous landmark with current optical flow and feature
 5. New optical flow estimate of window
 6. Use new optical flow for step 2 and continue from there until threshold is reached
-
-<img width="821" height="680" alt="image" src="https://github.com/user-attachments/assets/94c29962-10ef-4a0b-8dcc-8e31cf258582" />
-
 
 ### **Step one: eFAST Initial Feature Generation**
 Think of this as a black box: If a feature is discovered with eFAST, we use this as our initial estimate of the feature before detection, we take the coordinates that return from this and use it for tracking
@@ -32,6 +31,6 @@ Now we need to find the probability that the previous landmark correlates with t
 
 <img width="958" height="126" alt="image" src="https://github.com/user-attachments/assets/0670dfc1-6f85-413b-b8e0-b4f53bf5f180" />
 
-## Updating Optical Flow
+### Updating Optical Flow
 Once we have everything we need: landmarks, current flow, probability and time window, we can update the optical flow using this equation
 
