@@ -26,6 +26,7 @@ Otherwise, we use the median formula here to calculate the window size
 
 ### **Find the Probability that Previous Landmark correlates with current feature**
 Now we need to find the probability that the previous landmark correlates with the current flow/feature fi and ui.
+
 <img width="958" height="126" alt="image" src="https://github.com/user-attachments/assets/0670dfc1-6f85-413b-b8e0-b4f53bf5f180" />
 
 ## Updating Optical Flow
