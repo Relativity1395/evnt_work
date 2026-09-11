@@ -4,7 +4,9 @@
 
 The sequence of the algorithm is as follows:
 
+
 <img width="821" height="680" alt="image" src="https://github.com/user-attachments/assets/94c29962-10ef-4a0b-8dcc-8e31cf258582" />
+
 
 1. eFAST initial feature generation
 2. Initial optical flow estimate and landmark generation
