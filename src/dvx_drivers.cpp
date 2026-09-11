@@ -132,7 +132,7 @@ int main(void){
                         << imu.gyro_x << ","
                         << imu.gyro_y << ","
                         << imu.gyro_z 
-                        << '\n'
+                        << '\n' ;
 
 
                     }
@@ -164,23 +164,7 @@ int main(void){
             }
                 
 
-                for (int32_t j = 0; j < eventNum; j++) {
-                    
-                    event_t evnt = get_events(polarity, j);
 
-                    bool feature = detector.isFeature(evnt);
-
-                    if (feature == true){
-                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                        // std::cout<< "feature position x: " << evnt.x << std::endl;
-                        // std::cout<< "feature position y: " << evnt.y << std::endl;
-                    }
-                    // else if (evnt.p == 1){
-                    // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                    // }else{
-                    //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
-                    // }
-                }
                 
             
             
