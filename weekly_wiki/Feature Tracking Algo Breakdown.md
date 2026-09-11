@@ -31,3 +31,5 @@ Now we need to find the probability that the previous landmark correlates with t
 
 ## Updating Optical Flow
 Once we have everything we need: landmarks, current flow, probability and time window, we can update the optical flow using this equation
+<img width="958" height="126" alt="image" src="https://github.com/user-attachments/assets/0670dfc1-6f85-413b-b8e0-b4f53bf5f180" />
+
