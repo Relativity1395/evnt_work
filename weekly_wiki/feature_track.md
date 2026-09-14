@@ -98,6 +98,15 @@ graph TD
     classDef output fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
     classDef default fill:#fff,stroke:#333,stroke-width:1px,color:#000
 
+    ```mermaid
+graph TD
+    %% Styling
+    classDef input fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000
+    classDef process fill:#f1f8e9,stroke:#689f38,stroke-width:2px,color:#000
+    classDef align fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef output fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef default fill:#fff,stroke:#333,stroke-width:1px,color:#000
+
     %% Inputs
     subgraph INPUTS [ALGORITHM 2 INPUTS]
         E["Raw Events Stream<br>e_i = (x_i, y_i, t_i, p_i)"]:::input
