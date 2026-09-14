@@ -7,6 +7,9 @@
 
 <img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/a87d6f36-7234-471f-a00b-24621b733a54" />
 
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/4788fb31-0d62-4886-8101-6c5c4b5bb371" />
+
+
 The sequence of the algorithm is as follows:
 
 1. eFAST initial feature generation
