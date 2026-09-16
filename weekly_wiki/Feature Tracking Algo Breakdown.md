@@ -9,9 +9,9 @@
 
 <img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/8a208269-8d7e-4f65-acc6-9bbf782e487c" />
 
-## Recap of inputs
+# Recap of inputs
 
-### Sensor state, si
+## Sensor state, si
 <img width="591" height="88" alt="image" src="https://github.com/user-attachments/assets/cca2465e-a2bf-4986-a4ff-631cc067763e" />
 
 we only require q, v, and p for Algo 2
@@ -22,24 +22,48 @@ v is the velocity
 
 p is the poistion
 
-### Time Window Boundaries, $T_i$
+###Time Window Boundaries, $T_i$
 
 <img width="458" height="108" alt="image" src="https://github.com/user-attachments/assets/c141c9c3-46d1-4f58-ad8a-ec86a7deaa27" />
 
 $T_i$ and $T_{i+1}$ are the start and end points of our Time Window
 
-### Window Size dt
+## Window Size dt
 
 <img width="405" height="103" alt="image" src="https://github.com/user-attachments/assets/773f7fa0-023f-4741-b541-eac6edc8c03b" />
 
 To solve for the time window size we take a feature and use this formula to estimate how long it takes to move k pixels over the magnitude of the optical flow, u.
 
-### Events generated during time window t ∈ [Ti, Ti + dti]
+## Events generated during time window t ∈ [Ti, Ti + dti]
 
 This is the new events captured by the event camera during the time window t ∈ [Ti, Ti + dti]. Events include x - position, y - position, t - time, and p - polarity
 
 <img width="401" height="95" alt="image" src="https://github.com/user-attachments/assets/b7ed50b2-6a72-48db-a2ea-86cb9256fad9" />
 
+$x_i$ is the 2D pixel coordinate on the camera sensor where the event (the change in brightness) was triggered.
+
+$t_i$ is the exact time stamp of when that event occured
+
+## Features {f} generate during the time window and associated templates, <img width="125" height="40" alt="image" src="https://github.com/user-attachments/assets/3aac1a21-e3be-4b92-95ee-6b9cc8b5f0b4" />
+
+<img width="558" height="77" alt="image" src="https://github.com/user-attachments/assets/4a1e7f06-387a-473f-a1cb-f9decbe5cd6b" />
+
+The new features are calculated by adding the feature at the start of the time window, $T_i$, with the product of the optical flow, u, and length of the time window ($T_i+1$, $T_i$)
+
+
+<img width="291" height="122" alt="image" src="https://github.com/user-attachments/assets/9b94b1bd-1545-4376-9653-c01f36ac411d" />
+
+This is the current template of the feature.
+
+
+<img width="840" height="105" alt="image" src="https://github.com/user-attachments/assets/86d8b353-3597-4145-abd4-5fdb633c351e" />
+
+This is the formula for calculating the current template/landmark.
+
+
+<img width="295" height="126" alt="image" src="https://github.com/user-attachments/assets/ec8a3f12-bb29-42f2-b7a8-3ae10df319fe" />
+
+This is the first template made of the feature.
 
 
 
