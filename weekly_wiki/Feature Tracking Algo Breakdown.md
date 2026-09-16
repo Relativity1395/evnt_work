@@ -32,7 +32,13 @@ $T_i$ and $T_{i+1}$ are the start and end points of our Time Window
 
 <img width="405" height="103" alt="image" src="https://github.com/user-attachments/assets/773f7fa0-023f-4741-b541-eac6edc8c03b" />
 
-To solve for the time window size we take a feature and use this formula to estimate how long it takes to move k pixels.
+To solve for the time window size we take a feature and use this formula to estimate how long it takes to move k pixels over the magnitude of the optical flow, u.
+
+### Events generated during time window t ∈ [Ti, Ti + dti]
+
+This is the new events captured by the event camera during the time window t ∈ [Ti, Ti + dti]. Events include x - position, y - position, t - time, and p - polarity
+
+<img width="401" height="95" alt="image" src="https://github.com/user-attachments/assets/b7ed50b2-6a72-48db-a2ea-86cb9256fad9" />
 
 
 
