@@ -9,9 +9,24 @@
 
 <img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/8a208269-8d7e-4f65-acc6-9bbf782e487c" />
 
+## Recap of inputs
+
+### Sensor state, si
+<img width="591" height="88" alt="image" src="https://github.com/user-attachments/assets/cca2465e-a2bf-4986-a4ff-631cc067763e" />
+
+we only require q, v, and p for Algo 2
+
+q is the rotation
+
+v is the velocity
+
+p is the poistion
+
+### Current time, Ti
 
 
-The sequence of the algorithm is as follows:
+
+#### The sequence of the algorithm is as follows:
 
 1. eFAST initial feature generation
 2. Initial optical flow estimate and landmark generation
