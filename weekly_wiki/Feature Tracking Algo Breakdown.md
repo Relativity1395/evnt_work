@@ -22,7 +22,18 @@ v is the velocity
 
 p is the poistion
 
-### Current time, Ti
+### Time Window Boundaries, $T_i$
+
+<img width="458" height="108" alt="image" src="https://github.com/user-attachments/assets/c141c9c3-46d1-4f58-ad8a-ec86a7deaa27" />
+
+$T_i$ and $T_{i+1}$ are the start and end points of our Time Window
+
+### Window Size dt
+
+<img width="405" height="103" alt="image" src="https://github.com/user-attachments/assets/773f7fa0-023f-4741-b541-eac6edc8c03b" />
+
+To solve for the time window size we take a feature and use this formula to estimate how long it takes to move k pixels.
+
 
 
 
