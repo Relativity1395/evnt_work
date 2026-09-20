@@ -17,7 +17,18 @@ find_library(LIBCAER_LIB NAMES caer
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
-add_executable(dvxplore_simple  src/dvx_drivers.cpp third_party/fast_detector.cpp)
+add_executable(dvxplore_simple  
+               src/dvx_drivers.cpp 
+               src/OpticalFlow.cpp
+               third_party/fast_detector.cpp              
+               )
+add_executable(test_optical_flow
+               test_aaltman/test_optical_flow.cpp
+               src/OpticalFlow.cpp)
+target_include_directories(test_optical_flow PRIVATE
+                            include/
+                            ${EIGEN_INCLUDE_DIR})
+
 set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(dvxplore_simple PRIVATE
