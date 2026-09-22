@@ -9,12 +9,12 @@ struct Event{
     bool polarity;
 };
 
-struct Feature{
+class Feature{
     private:
-        Eigen::Vector2d position;
-        std::vector<Event> events;
-        Eigen::Vector2d flow;
-        std::vector<Eigen::Vector2d> landmark;
+        Eigen::Vector2d position_;
+        std::vector<Event> events_;
+        Eigen::Vector2d flow_;
+        std::vector<Eigen::Vector2d> landmark_;
 
     public:
         void propagatePreviousEvents(double Ti);
