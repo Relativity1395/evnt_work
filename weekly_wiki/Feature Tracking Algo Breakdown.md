@@ -10,13 +10,14 @@
 
 ## The sequence of feature tracking algorithm is as follows:
 
-1. Spatiotemporal Neighborhood Extraction ($W_i$)
-2. EM 1 — Optical Flow Optimization ($u$)
-3. EM 2 — Template Alignment & Drift Correction ($\sigma, b$)
-4. Feature Position Update & Adaptive Window Sizing
+#### **Step 1:** Spatiotemporal Neighborhood Extraction ($W_i$)
+#### **Step 2:** EM 1 — Optical Flow Optimization ($u$)
+#### **Step 3:** EM 2 — Template Alignment & Drift Correction ($\sigma, b$)
+#### **Step 4:** Feature Position Update & Adaptive Window Sizing
 
 ## Step 1: Spatiotemporal Neighborhood Extraction ($W_i$)
-### Goal: Extract only the events in the current time slice $[T_i, T_i + dt_i]$ that belong to the local spatial neighborhood of feature $f(T_i)$. This restricts association searches to a local window and enforces the assumption that optical flow is locally uniform.
+### Goal: 
+#### Extract only the events in the current time slice $[T_i, T_i + dt_i]$ that belong to the local spatial neighborhood of feature $f(T_i)$. This restricts association searches to a local window and enforces the assumption that optical flow is locally uniform.
 
 ### Inputs: 
 #### $f(T_i) \in \mathbb{R}^2$: Current estimated feature location on the image plane at time $T_i$.
@@ -28,7 +29,26 @@
 ### Outputs:
 #### $W_i = \{(x_k, t_k)\}_{k=1}^{n_i}$: Subset of $n_i$ events belonging to the feature's spatiotemporal bounding volume.
 
+### Theoretical Process
+#### 1. $W_i = \{(x_k, t_k)\}_{k=1}^{n_i}$: Subset of $n_i$ events belonging to the feature's spatiotemporal bounding volume.
+#### 2. Compute relative time offset: $\bar{t}_k = t_k - T_i$
+#### 3. Apply spatial boundary check around feature position $f(T_i)$: 
+
+$$
+\|(x_k - \bar{t}_k u_{i-1}) - f(T_i)\| \le \xi
+$$
+
+#### 4. Store passing events in buffer $W_i$ for EM 1
+
 ## Step 2: EM 1 — Optical Flow Optimization ($u$)
+### Goal:
+#### Determine the 2D velocity vector $u = [u_x, u_y]^T$ that aligns events in $W_i$ with the forward-propagated landmark positions from the previous step ($\tilde{l}^{i-1}$), canceling motion blur within the window
+
+### Inputs:
+#### $W_i = \{(x_k, t_k)\}_{k=1}^{n_i}$: Extracted events
+#### <img width="70" height="25" alt="image" src="https://github.com/user-attachments/assets/c000dd84-aca8-4ec1-8f98-1c505c5619ee" /> : Prior template points, formed by forward-propagating the previous window's events to the current timestamp: <img width="300" height="25" alt="image" src="https://github.com/user-attachments/assets/b691713d-8d36-49fb-943e-a297db568c0a" />
+ 
+#### $\Sigma = 2I_{2 \times 2}$: Measurement covariance matrix
 
 ## Step 3: EM 2 — Template Alignment & Drift Correction ($\sigma, b$)
 
