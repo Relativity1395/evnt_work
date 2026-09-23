@@ -69,12 +69,10 @@ This is the first template made of the feature.
 
 #### The sequence of the algorithm is as follows:
 
-1. eFAST initial feature generation
-2. Initial optical flow estimate and landmark generation
-3. Time window calculation
-4. Probability fitting previous landmark with current optical flow and feature
-5. New optical flow estimate of window
-6. Use new optical flow for step 2 and continue from there until threshold is reached
+1. Spatiotemporal Neighborhood Extraction ($W_i$)
+2. EM 1 — Optical Flow Optimization ($u$)
+3. EM 2 — Template Alignment & Drift Correction ($\sigma, b$)
+4. Feature Position Update & Adaptive Window Sizing
 
 ### **Step one: eFAST Initial Feature Generation**
 Think of this as a black box: If a feature is discovered with eFAST, we use this as our initial estimate of the feature before detection, we take the coordinates that return from this and use it for tracking
