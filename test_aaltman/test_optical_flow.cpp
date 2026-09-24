@@ -19,7 +19,7 @@ int main(){
     Events.push_back(event2);
     Events.push_back(event3);
     Eigen::Vector2d startPosition(0,0);
-    Feature feature(startPosition, Events, Ui);
+    Feature feature(startPosition, Events, Events, Ui, 0.0);
     feature.propagatePreviousEvents(Ti);
     const std::vector<Eigen::Vector2d>& result = feature.getLandmark();
     std::cout << result[0].x() << "," << result[0].y() << std::endl; //
