@@ -6,7 +6,7 @@
 #include <deque>
 
 #include <libcaer/libcaer.h>
-#include "../include/dvx_drivers.hpp"
+#include "../include/DVX_Drivers.hpp"
 
 #include <Eigen/Dense>
 
