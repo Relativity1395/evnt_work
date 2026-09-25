@@ -16,12 +16,14 @@ Feature::Feature(
     std::vector<Event> currentEvents,
     std::vector<Event> previousEvents,
     Eigen::Vector2d flow,
+    std::vector<Eigen::Vector2d> bProp,
     double xi
 ){
     this->position = position;
     this -> currentEvents = currentEvents;
     this->previousEvents= previousEvents;
     this->flow = flow;
+    this->bProp = bProp;
     this->xi = xi;
     
 }
