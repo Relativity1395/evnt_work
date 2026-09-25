@@ -17,22 +17,49 @@ find_library(LIBCAER_LIB NAMES caer
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
-add_executable(dvxplore_simple  
-               src/dvx_drivers.cpp 
-               src/OpticalFlow.cpp
-               third_party/fast_detector.cpp              
-               )
-add_executable(test_optical_flow
-               test_aaltman/test_optical_flow.cpp
-               src/OpticalFlow.cpp)
-target_include_directories(test_optical_flow PRIVATE
-                            include/
-                            ${EIGEN_INCLUDE_DIR})
+# evio_core algorithm itself
+add_library(evio_core STATIC
+  src/RawAdapter.cpp
+  src/Feature.cpp
+  src/FeatureDetector.cpp
+  src/OpticalFlow.cpp
+  src/TemplateAlignment.cpp
+  src/OutlierRejection.cpp
+  src/TemporalWindow.cpp
+  src/FeatureTracker.cpp
+  src/StateEstimator.cpp
+  src/EVIO.cpp
+)
 
-set_target_properties(dvxplore_simple PROPERTIES LINKER_LANGUAGE CXX)
+target_include_directories(evio_core PUBLIC
+  include/
+  third_party/
+  ${EIGEN_INCLUDE_DIR}
+  ${LIBCAER_INCLUDE_DIR}
+)
+
+# dvxplore_simple
+add_executable(dvxplore_simple
+  src/DVX_Drivers.cpp
+  third_party/fast_detector.cpp
+  src/main.cpp
+)
 
 target_include_directories(dvxplore_simple PRIVATE
-  src/ ${LIBCAER_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIR})
+  ${LIBCAER_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+)
 
 target_link_libraries(dvxplore_simple PRIVATE
- ${LIBCAER_LIB} pthread rt ${OpenCV_LIBS} ${EIGEN_LIBS})
+  evio_core
+  ${LIBCAER_LIB}
+  pthread
+  rt
+  ${OpenCV_LIBS}
+)
+
+# unit tests
+add_executable(test_feature
+  unit_tests/test_feature.cpp
+)
+target_link_libraries(test_feature PRIVATE evio_core)
