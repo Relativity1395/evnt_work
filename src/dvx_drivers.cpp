@@ -2,6 +2,7 @@
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
+#include <libcaer/events/imu6.h>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
@@ -79,11 +80,11 @@ int main(void){
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
-    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
+    cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
 
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
-            canvas.setTo(cv::Scalar(0, 0, 0));
+            canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -100,12 +101,53 @@ int main(void){
                 caerEventPacketHeader packetHeader =
                     caerEventPacketContainerGetEventPacket(packetContainer, i);
                 if (packetHeader == NULL) continue;
+                //checking if IMU6 event
+                if (caerEventPacketHeaderGetEventType(packetHeader) == IMU6_EVENT){
+                    caerIMU6EventPacket imuPacket = caerIMU6EventPacketFromPacketHeader(packetHeader);
+                    int32_t imuEventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    for(int32_t j = 0; j < imuEventNum; j++){
+                        //getting each event one by one in the packet
+                        caerIMU6Event imuEvent = caerIMU6EventPacketGetEvent(imuPacket, j);
+
+                        if(!caerIMU6EventIsValid(imuEvent)){
+                            continue;
+                        }
+                        imu_t imu;
+                        imu.t = caerIMU6EventGetTimestamp64(imuEvent, imuPacket);
+
+                        //setting accel values
+                        imu.accel_x = caerIMU6EventGetAccelX(imuEvent);
+                        imu.accel_y = caerIMU6EventGetAccelY(imuEvent);
+                        imu.accel_z = caerIMU6EventGetAccelZ(imuEvent);
+
+                        //setting gyro values
+                        imu.gyro_x = caerIMU6EventGetGyroX(imuEvent);
+                        imu.gyro_y = caerIMU6EventGetGyroY(imuEvent);
+                        imu.gyro_z = caerIMU6EventGetGyroZ(imuEvent);
+
+                        imu.temperature = caerIMU6EventGetTemp(imuEvent);
+                        //printing the event 
+                        std::cout
+                        << "ACCEL: "
+                        << imu.accel_x << ","
+                        << imu.accel_y << ","
+                        << imu.accel_z
+                        << " | GYRO: "
+                        << imu.gyro_x << ","
+                        << imu.gyro_y << ","
+                        << imu.gyro_z 
+                        << '\n' ;
+
+
+                    }
+                }
+                    
+                    
+    
                 if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT){
-
-                caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-                int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
-
-                for (int32_t j = 0; j < eventNum; j++) {
+                    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+                    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    for (int32_t j = 0; j < eventNum; j++) {
                     
                     event_t evnt = get_events(polarity, j);
 
@@ -121,35 +163,12 @@ int main(void){
                     // }else{
                     //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
                     // }
-                    }
+                
                 }
-                if (caerEventPacketHeaderGetEventType(packetHeader) == IMU6_EVENT){
-                    caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
-                    int32_t numIMU = caerEventPacketHeaderGetEventNumber(packetHeader);
-                    for (int32_t k = 0; k < numIMU; k++){
-                        caerIMU6Event imu = caerIMU6EventPacketGetEvent(imuPacket, k);
-                        if (!caerIMU6EventIsValid(imu)) continue;
+            }
+                
 
-                        
-                        float accelX = caerIMU6EventGetAccelX(imu);
-                        float accelY = caerIMU6EventGetAccelY(imu);
-                        float accelZ = caerIMU6EventGetAccelZ(imu);
 
-                        float gyroX = caerIMU6EventGetGyroX(imu);
-                        float gyroY = caerIMU6EventGetGyroY(imu);
-                        float gyroZ = caerIMU6EventGetGyroZ(imu);
-
-                        std::cout << "Acceleration in the x direction: " << accelX << std::endl;;
-                        std::cout << "Acceleration in the y direction: " << accelY << std::endl;;
-                        std::cout << "Acceleration in the z direction: " << accelZ << std::endl;;
-
-                        std::cout << "gyro x : " << gyroX << std::endl;;
-                        std::cout << "gyro y accel: " << gyroY << std::endl;;
-                        std::cout << "gyro z accel: " << gyroZ << std::endl;;
-                    }
-
-                    
-                }   
                 
             
             
