@@ -21,12 +21,12 @@ class Feature{
         std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
 
+
     public:
         Feature(Eigen::Vector2d position,
                 std::vector<Event> previousEvents,
                 std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
-                std::vector<Eigen::Vector2d> bProp,
                 double xi
             );
         void propagatePreviousEvents(double Ti);
@@ -34,7 +34,7 @@ class Feature{
         void setEvents(const std::vector<Event>& newEvents);
         void findEvents(const std::vector<Event>& E, double Ti, double dti);
         std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> generateKD();
-
+        void Feature::weightDist();
 
 };
 

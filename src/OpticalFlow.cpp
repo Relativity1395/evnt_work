@@ -16,14 +16,12 @@ Feature::Feature(
     std::vector<Event> currentEvents,
     std::vector<Event> previousEvents,
     Eigen::Vector2d flow,
-    std::vector<Eigen::Vector2d> bProp,
     double xi
 ){
     this->position = position;
     this -> currentEvents = currentEvents;
     this->previousEvents= previousEvents;
     this->flow = flow;
-    this->bProp = bProp;
     this->xi = xi;
     
 }
@@ -52,9 +50,7 @@ void Feature::findEvents(const std::vector<Event>& E, double Ti, double dti){
                 bProp.push_back(backProp);
             }
         }
-    }
-
-    
+    }  
 }
 
 std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generateKD(){
@@ -76,5 +72,9 @@ std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generat
     }
 
     return totMatches;
+
+}
+
+void Feature::weightDist(){
 
 }
