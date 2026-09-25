@@ -33,7 +33,7 @@ class Feature{
         const std::vector<Eigen::Vector2d>& getLandmark() const;
         void setEvents(const std::vector<Event>& newEvents);
         void findEvents(const std::vector<Event>& E, double Ti, double dti);
-        void generateKD();
+        std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> generateKD();
 
 
 };
