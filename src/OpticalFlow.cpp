@@ -57,17 +57,24 @@ void Feature::findEvents(const std::vector<Event>& E, double Ti, double dti){
     
 }
 
-void Feature::generateKD(){
+std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generateKD(){
 
     const double r2 = 4.2426;
+    const int dim = 2;
+    const int leaf = 10;
+    
     typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
-    my_kd_tree_t mat_index(2, landmark, 10);
-
+    my_kd_tree_t mat_index(dim, landmark, leaf);
     using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
     Matches ret_matches;
+    std::vector<Matches> totMatches;
     for (int i = 0; i < bProp.size(); i++){
-    const size_t nMatches = mat_index.index->radiusSearch(bProp[i].data(), r2, ret_matches);
+        const size_t nMatches = mat_index.index->radiusSearch(bProp[i].data(), r2, ret_matches);
+        if (nMatches > 0){
+            totMatches.push_back(ret_matches);
+        }
     }
 
+    return totMatches;
 
 }
