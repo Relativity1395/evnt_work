@@ -18,7 +18,6 @@ class Feature{
         std::vector<Event> previousEvents;
         std::vector<Event> currentEvents;
         Eigen::Vector2d flow;
-        std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
 
     public:
@@ -26,7 +25,6 @@ class Feature{
                 std::vector<Event> previousEvents,
                 std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
-                std::vector<Eigen::Vector2d> bProp,
                 double xi
             );
         void propagatePreviousEvents(double Ti);
