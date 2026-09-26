@@ -1,5 +1,6 @@
 #pragma once
 
+
 #ifndef FAST_DETECTOR_H
 #define FAST_DETECTOR_H
 
@@ -7,6 +8,7 @@
 
 #include <libcaer/libcaer.h>
 #include "../include/DVX_Drivers.hpp"
+#include "../include/Types.hpp"
 
 #include <Eigen/Dense>
 
@@ -21,7 +23,7 @@ public:
   FastDetector(bool connect = true);
   virtual ~FastDetector();
 
-  virtual bool isFeature(const event_t& e) override;
+  virtual bool isFeature(const Event& e) override;
 
 private:
   // SAE

@@ -1,23 +1,6 @@
-
-#include <libcaer/libcaer.h>
-#include <libcaer/devices/dvxplorer.h>
-#include <libcaer/events/polarity.h>
-#include <libcaer/events/imu6.h>
-#include <opencv2/opencv.hpp>
-#include <Eigen/Dense>
-
-#include <signal.h>
-#include <atomic>
-#include <cstdio>
-#include <cstdlib>
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <cmath>
-#include <iostream>
 #include "../include/DVX_Drivers.hpp"
+#include "../include/Types.hpp"
 #include "../third_party/fast_detector.h"
-
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -34,18 +17,17 @@ static void usbShutdownHandler(void *ptr) {
 // }
 
 
-event_t get_events(caerPolarityEventPacket polarity, int j){
-    event_t evnt;
+Event get_events(caerPolarityEventPacket polarity, int j){
+    Event evnt;
 
     caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
     if (!caerPolarityEventIsValid(evt)){
         exit(EXIT_FAILURE);
     }
 
-    evnt.x = caerPolarityEventGetX(evt);
-    evnt.y = caerPolarityEventGetY(evt);
-    evnt.p = caerPolarityEventGetPolarity(evt);
-    evnt.t = caerPolarityEventGetTimestamp64(evt, polarity);
+    evnt.position << (double) caerPolarityEventGetX(evt), (double) caerPolarityEventGetY(evt);
+    evnt.polarity = caerPolarityEventGetPolarity(evt);
+    evnt.timestamp = (double) caerPolarityEventGetTimestamp64(evt, polarity);
 
     return evnt;
 }
@@ -82,6 +64,8 @@ int main(void){
     
     cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
 
+    std::vector<Event> currEvents;
+    
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             canvas.setTo(cv::Scalar(128, 128, 128));
@@ -149,24 +133,30 @@ int main(void){
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
                     for (int32_t j = 0; j < eventNum; j++) {
                     
-                    event_t evnt = get_events(polarity, j);
+                        currEvents.push_back(get_events(polarity, j));
 
-                    bool feature = detector.isFeature(evnt);
+                        bool feature = detector.isFeature(currEvents.back());
 
-                    if (feature == true){
-                        cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                        // std::cout<< "feature position x: " << evnt.x << std::endl;
-                        // std::cout<< "feature position y: " << evnt.y << std::endl;
-                    }
-                    // else if (evnt.p == 1){
-                    // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                    // }else{
-                    //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
-                    // }
-                
+                        if (feature == true){
+
+                            
+                            cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
+                            // std::cout<< "feature position x: " << evnt.x << std::endl;
+                            // std::cout<< "feature position y: " << evnt.y << std::endl;
+                        }
+                        // else if (evnt.p == 1){
+                        // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
+                        // }else{
+                        //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
+                        // }
+                        
                 }
+
+
+
             }
-                
+            
+
 
 
                 

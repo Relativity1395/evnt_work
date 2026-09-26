@@ -5,14 +5,12 @@ Feature::Feature(
     std::vector<Event> currentEvents,
     std::vector<Event> previousEvents,
     Eigen::Vector2d flow,
-    std::vector<Eigen::Vector2d> bProp,
     double xi
 ){
     this->position = position;
     this->currentEvents = currentEvents;
     this->previousEvents= previousEvents;
     this->flow = flow;
-    this->bProp = bProp;
     this->xi = xi;
 }
 
@@ -65,7 +63,7 @@ std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generat
     using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
     Matches ret_matches;
     std::vector<Matches> totMatches;
-    for (int i = 0; i < bProp.size(); i++){
+    for (size_t i = 0; i < bProp.size(); i++){
         const size_t nMatches = mat_index.index->radiusSearch(bProp[i].data(), r2, ret_matches);
         if (nMatches > 0){
             totMatches.push_back(ret_matches);

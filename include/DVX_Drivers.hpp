@@ -1,7 +1,10 @@
+
 #include <libcaer/libcaer.h>
-#include <libcaer/events/imu6.h>
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
+#include <libcaer/events/imu6.h>
+#include <opencv2/opencv.hpp>
+#include <Eigen/Dense>
 
 #include <signal.h>
 #include <atomic>
@@ -12,6 +15,7 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
+
 
 #ifndef DVX_DRIVERS_H
 #define DVX_DRIVERS_H

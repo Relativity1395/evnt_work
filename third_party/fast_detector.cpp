@@ -26,18 +26,21 @@ FastDetector::~FastDetector()
 {
 }
 
-bool FastDetector::isFeature(const event_t& e)
+bool FastDetector::isFeature(const Event& e)
 {
   // update SAE
-  const int pol = e.p ? 1 : 0;
-  sae_[pol](e.x, e.y) = e.t;
+  const int ex = static_cast<int>(e.position.x());
+  const int ey = static_cast<int>(e.position.y());\
+
+  const int pol = e.polarity ? 1 : 0;
+  sae_[pol](ey, ex) = e.timestamp;
 
   const int max_scale = 1;
 
   // only check if not too close to border
   const int cs = max_scale*4;
-  if (e.x < cs || e.x >= sensor_width_-cs ||
-      e.y < cs || e.y >= sensor_height_-cs)
+  if (ex < cs || ex >= sensor_width_-cs ||
+      ey < cs || ey >= sensor_height_-cs)
   {
     return false;
   }
@@ -49,17 +52,17 @@ bool FastDetector::isFeature(const event_t& e)
     for (int streak_size = 3; streak_size<=6; streak_size++)
     {
       // check that streak event is larger than neighbor
-      if (sae_[pol](e.x+circle3_[i][0], e.y+circle3_[i][1]) <  sae_[pol](e.x+circle3_[(i-1+16)%16][0], e.y+circle3_[(i-1+16)%16][1]))
+      if (sae_[pol](ex+circle3_[i][0], ey+circle3_[i][1]) <  sae_[pol](ex+circle3_[(i-1+16)%16][0], ey+circle3_[(i-1+16)%16][1]))
         continue;
 
       // check that streak event is larger than neighbor
-      if (sae_[pol](e.x+circle3_[(i+streak_size-1)%16][0], e.y+circle3_[(i+streak_size-1)%16][1]) <          sae_[pol](e.x+circle3_[(i+streak_size)%16][0], e.y+circle3_[(i+streak_size)%16][1]))
+      if (sae_[pol](ex+circle3_[(i+streak_size-1)%16][0], ey+circle3_[(i+streak_size-1)%16][1]) <          sae_[pol](ex+circle3_[(i+streak_size)%16][0], ey+circle3_[(i+streak_size)%16][1]))
         continue;
 
-      double min_t = sae_[pol](e.x+circle3_[i][0], e.y+circle3_[i][1]);
+      double min_t = sae_[pol](ex+circle3_[i][0], ey+circle3_[i][1]);
       for (int j=1; j<streak_size; j++)
       {
-        const double tj = sae_[pol](e.x+circle3_[(i+j)%16][0], e.y+circle3_[(i+j)%16][1]);
+        const double tj = sae_[pol](ex+circle3_[(i+j)%16][0], ey+circle3_[(i+j)%16][1]);
         if (tj < min_t)
           min_t = tj;
       }
@@ -67,7 +70,7 @@ bool FastDetector::isFeature(const event_t& e)
       bool did_break = false;
       for (int j=streak_size; j<16; j++)
       {
-        const double tj = sae_[pol](e.x+circle3_[(i+j)%16][0], e.y+circle3_[(i+j)%16][1]);
+        const double tj = sae_[pol](ex+circle3_[(i+j)%16][0], ey+circle3_[(i+j)%16][1]);
 
         if (tj >= min_t)
         {
@@ -97,17 +100,17 @@ bool FastDetector::isFeature(const event_t& e)
       for (int streak_size = 4; streak_size<=8; streak_size++)
       {
         // check that first event is larger than neighbor
-        if (sae_[pol](e.x+circle4_[i][0], e.y+circle4_[i][1]) <  sae_[pol](e.x+circle4_[(i-1+20)%20][0], e.y+circle4_[(i-1+20)%20][1]))
+        if (sae_[pol](ex+circle4_[i][0], ey+circle4_[i][1]) <  sae_[pol](ex+circle4_[(i-1+20)%20][0], ey+circle4_[(i-1+20)%20][1]))
           continue;
 
         // check that streak event is larger than neighbor
-        if (sae_[pol](e.x+circle4_[(i+streak_size-1)%20][0], e.y+circle4_[(i+streak_size-1)%20][1]) <          sae_[pol](e.x+circle4_[(i+streak_size)%20][0], e.y+circle4_[(i+streak_size)%20][1]))
+        if (sae_[pol](ex+circle4_[(i+streak_size-1)%20][0], ey+circle4_[(i+streak_size-1)%20][1]) <          sae_[pol](ex+circle4_[(i+streak_size)%20][0], ey+circle4_[(i+streak_size)%20][1]))
           continue;
 
-        double min_t = sae_[pol](e.x+circle4_[i][0], e.y+circle4_[i][1]);
+        double min_t = sae_[pol](ex+circle4_[i][0], ey+circle4_[i][1]);
         for (int j=1; j<streak_size; j++)
         {
-          const double tj = sae_[pol](e.x+circle4_[(i+j)%20][0], e.y+circle4_[(i+j)%20][1]);
+          const double tj = sae_[pol](ex+circle4_[(i+j)%20][0], ey+circle4_[(i+j)%20][1]);
           if (tj < min_t)
             min_t = tj;
         }
@@ -115,7 +118,7 @@ bool FastDetector::isFeature(const event_t& e)
         bool did_break = false;
         for (int j=streak_size; j<20; j++)
         {
-          const double tj = sae_[pol](e.x+circle4_[(i+j)%20][0], e.y+circle4_[(i+j)%20][1]);
+          const double tj = sae_[pol](ex+circle4_[(i+j)%20][0], ey+circle4_[(i+j)%20][1]);
           if (tj >= min_t)
           {
             did_break = true;

@@ -13,7 +13,7 @@ class Detector {
 public:
   Detector(bool connect = true) { (void)connect; }
   virtual ~Detector() = default;
-  virtual bool isFeature(const event_t& e) = 0;
+  virtual bool isFeature(const Event& e) = 0;
 protected:
   std::string detector_name_;
 };

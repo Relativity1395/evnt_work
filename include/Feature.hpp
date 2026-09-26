@@ -20,7 +20,6 @@ class Feature{
                 std::vector<Event> previousEvents,
                 std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
-                std::vector<Eigen::Vector2d> bProp,
                 double xi
             );
         void propagatePreviousEvents(double Ti);
