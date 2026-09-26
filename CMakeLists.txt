@@ -29,6 +29,7 @@ add_library(evio_core STATIC
   src/FeatureTracker.cpp
   src/StateEstimator.cpp
   src/EVIO.cpp
+  src/WeightDist.cpp
 )
 
 target_include_directories(evio_core PUBLIC
