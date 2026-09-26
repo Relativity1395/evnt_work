@@ -134,7 +134,7 @@ int main(void){
                     for (int32_t j = 0; j < eventNum; j++) {
                     
                         currEvents.push_back(get_events(polarity, j));
-
+                         //test push
                         bool feature = detector.isFeature(currEvents.back());
 
                         if (feature == true){
