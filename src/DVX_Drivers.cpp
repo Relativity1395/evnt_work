@@ -1,6 +1,7 @@
 #include "../include/DVX_Drivers.hpp"
 #include "../include/Types.hpp"
 #include "../third_party/fast_detector.h"
+#include "../include/Feature.hpp"
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -65,7 +66,8 @@ int main(void){
     cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
 
     std::vector<Event> currEvents;
-    
+    std::vector<Feature> currFeatures;
+    std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             canvas.setTo(cv::Scalar(128, 128, 128));
@@ -131,6 +133,7 @@ int main(void){
                 if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT){
                     caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    tempFeatures.clear();
                     for (int32_t j = 0; j < eventNum; j++) {
                     
                         currEvents.push_back(get_events(polarity, j));
@@ -138,7 +141,19 @@ int main(void){
                         bool feature = detector.isFeature(currEvents.back());
 
                         if (feature == true){
+                            for (int i = 0; i < (int)currFeatures.size(); i++){
+                                if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
+                                    if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < 100){
+                                        Feature Feature(currEvents.back().timestamp, 0, {0}, {0}, Eigen::Vector2d(0,0), 15);
+                                        currFeatures.push_back(Feature);
+                                        break;
+                                    }
+                                    continue;
 
+                                }
+                                break;
+                            }
+                            
                             
                             cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
                             // std::cout<< "feature position x: " << evnt.x << std::endl;
@@ -154,16 +169,27 @@ int main(void){
 
 
 
+
+
             }
             
-
+            
 
 
                 
             
             
     }
-      caerEventPacketContainerFree(packetContainer);
+    for (int i = 0; i < (int)currFeatures.size(); i++){
+        currFeatures[i].findEvents(currEvents);
+        currFeatures[i].propagatePreviousEvents();
+        //calculate optimization here
+        //while loop calculating weight and flow until convergance
+
+        currFeatures[i].updateTimeWindow();
+        currFeatures[i].setEvents();
+    }
+    caerEventPacketContainerFree(packetContainer);
 
     // fade the whole canvas toward black so old corners decay
     // canvas *= 0.90;

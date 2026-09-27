@@ -9,22 +9,32 @@ class Feature{
     private:
         Eigen::Vector2d position;
         double xi;
+        double dti;
+        double Ti;
         std::vector<Event> previousEvents;
         std::vector<Event> currentEvents;
         Eigen::Vector2d flow;
         std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
+        std::vector<Eigen::Vector2d> t_flow;
 
     public:
         Feature(Eigen::Vector2d position,
+                double Ti,
+                double dti,
                 std::vector<Event> previousEvents,
                 std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
                 double xi
             );
-        void propagatePreviousEvents(double Ti);
+        void propagatePreviousEvents();
         const std::vector<Eigen::Vector2d>& getLandmark() const;
-        void setEvents(const std::vector<Event>& newEvents);
-        void findEvents(const std::vector<Event>& E, double Ti, double dti);
+        void setEvents();
+        void findEvents(const std::vector<Event>& E);
+        void updateTimeWindow();
         std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> generateKD();
-};
+        Eigen::Vector2d getPosition();
+        void updateFeature();
+        double getMedianMagnitude();
+     
+    };

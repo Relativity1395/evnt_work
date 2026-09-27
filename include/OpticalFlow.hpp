@@ -1,3 +1,3 @@
 #include "Feature.hpp"
-
-void checkInitFeature(Eigen::Vector2d);
+#include <stdlib.h>
+void checkInitFeature(Event& e);
