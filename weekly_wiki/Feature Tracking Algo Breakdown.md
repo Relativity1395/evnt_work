@@ -70,7 +70,6 @@ $$
 - $T_{i*}$: Timestamp when the feature was first instantiated
 - <img width="25" height="30" alt="image" src="https://github.com/user-attachments/assets/3ec7be93-f94b-426d-8b93-195593306473" /> : Anchor template point coordinates recorded at $T_{i*}$
 - $^{i*}R_i \in SO(3)$: Relative 3D rotation from the current frame to the initial anchor frame (provided by filter state)
-- $^{i*}R_i \in SO(3)$: Relative 3D rotation from the current frame to the initial anchor frame (provided by filter state)
 - $y_k^i$: Rotated, feature-centered coordinates of the current propagated events: <img width="511" height="67" alt="image" src="https://github.com/user-attachments/assets/2751c4b6-42ac-4ee3-b7b5-c90a8a27bc22" />
 - $\sigma \in \mathbb{R}$: Estimated scale variation
 - $b \in \mathbb{R}^2$: Translational drift correction vector
@@ -78,6 +77,95 @@ $$
 
 
 ### Analytical Process: 
+#### 1. Extract rotation prior from EKF State
+##### Goal: Remove orientation differences between the current camera frame and the keyframe template
+##### Variables used
+- $^{i*}R_i$ : 3D rotation matrix transforming coordinates from the current camera pose at time $T_i$ to the initial template frame at time $T_{i^*}$
+- $s_i$: Sensor state vector
+##### Steps:
+1. Retrieve $\bar{q}(T_{i^*})$ (Initial Feature Pose) and $\bar{q}(T_i)$ (Current Camera Pose) from sensor state vector for time interval from $s_i$
+2. Compute the relative rotation $^{i^*}R_i$ relative to the camera pose where the feature template was first initialized
+##### Output: 
+- Relative rotation matrix $^{i^*}R_i$
+_____________________________________________________________________________________________________
+#### 2. Rotate and Center Current Feature Points
+##### Goal: Project forward-propagated event points into the template coordinate frame and center them around the expected feature center
+##### Variables used:
+-  <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> : Forward-propagated event points at the end of the current window $T_{i+1}$(defined in Equation 7)
+-  <img width="352" height="32" alt="image" src="https://github.com/user-attachments/assets/75c425e3-a31a-43e9-806c-b82b1f91b7c1" />
+- $f(T_i)$: Feature position at time $T_i$
+- $u_i$: Converged optical flow vector from the preceding EM step
+- $dt_i$: Window duration ($T_{i+1} - T_i$)
+- $\pi(\cdot)$: Standard perspective projection function $\pi([X, Y, Z]^T) = [X/Z, Y/Z]^T$
+- $y_k^i$: Rotated and centered 2D point
+##### Steps
+1. Estimate the uncorrected feature position at time $T_{i+1}$ using linear propagation: $f(T_i) + u_i dt_i$
+2. Append depth/homogeneous coordinates to each propagated point <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> and the estimated center $f(T_i) + u_i dt_i$
+3. Rotate both by $^{i^*}R_i$ and project back into normalized image coordinates via $\pi(\cdot)$: <img width="491" height="71" alt="image" src="https://github.com/user-attachments/assets/7547ef69-0595-4a30-a202-34842468aef7" />
+##### Output:
+- Set of centered, rotation-compensated points $\{y_k^i\}_{k=1}^{n_i}$
+_____________________________________________________________________________________________________
+#### 3. Outlier Rejection via Distance Gating
+##### Goal: Discard invalid event-to-template pairs to accelerate correspondence matching and avoid tracking corruption
+##### Variables:
+- <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> : Points in the reference template recorded at onset time $T_{i^*}$
+- $\Sigma$: Measurement covariance matrix (set to $2I$)
+- $d_{\text{Mahalanobis}}$: Threshold distance (set to ? pixels)
+##### Steps:
+1. Query the pre-built $k$-d tree of template points <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> for each centered point $y_k$
+2. Filter out point pairs whose Mahalanobis distance exceeds ? pixels
+##### Output: 
+- Pruned set of candidate pairs $(y_k^i, \tilde{l}_j^{i^*})$
+_____________________________________________________________________________________________________
+#### 4. Expectation Step (E-Step)
+##### Goal: Compute probabilistic data association weights between the current points and template points
+##### Variables: 
+- <img width="75" height="25" alt="image" src="https://github.com/user-attachments/assets/e2f75f75-24d1-4d35-b7a4-b3d8d6b306d1" /> : Gaussian probability density function evaluated at $y_k$ with mean $\tilde{l}_j^{i^*}$ and covariance $\Sigma$
+- $r_{kj}$: Posterior probability that point $y_k$ corresponds to template landmark $j$
+##### Steps: 
+1. Evaluate the Gaussian likelihood of each active pair
+2. Normalize over all candidate template landmarks $j'$ associated with event $k$:
+- <img width="230" height="40" alt="image" src="https://github.com/user-attachments/assets/f550237d-f670-4e18-8432-719bc1ee30a7" />
+##### Output:
+- Normalized association weight matrix $r_{kj}$ (where $\sum_j r_{kj} = 1$
+_____________________________________________________________________________________________________
+#### 5. Maximization Step (M-Step)
+##### Goal: Find the optimal scale $\sigma$ and translation offset $b$ in closed form given the current association probabilities
+##### Variables:
+- $\bar{y}$: Centroid of current transformed points
+- $\bar{l}$: Centroid of reference template points
+- $\sigma$: Scale parameter
+- $b$: 2D translation offset
+##### Steps:
+1. Compute the empirical centroids:
+- <img width="302" height="67" alt="image" src="https://github.com/user-attachments/assets/799dc81b-30ef-4ebc-8a6e-ec917f9f000a" />
+2. Solve for the scale factor $\sigma$ via scaled ICP:
+- <img width="402" height="95" alt="image" src="https://github.com/user-attachments/assets/04ba9913-d5fc-4fcb-8b87-fbee53311011" />
+3. Solve for the 2D alignment translation $b$:
+  - <img width="397" height="72" alt="image" src="https://github.com/user-attachments/assets/db5eb32a-b075-4bab-8c96-2b74fa5b97f5" />
+##### Output:
+- Updated parameters $(\sigma, b)$
+_____________________________________________________________________________________________________
+#### 6. Cost Evaluation & Convergence Check
+##### Goal: Evaluate the weighted residual error to determine if the EM loop has converged
+##### Variables: 
+- $\text{cost}$: Total residual alignment mismatch
+- $\epsilon_2$: Convergence threshold
+##### Steps: 
+1. Compute the updated objective function value:
+- <img width="253" height="62" alt="image" src="https://github.com/user-attachments/assets/c0430737-d7ee-4543-97f9-52b1c7997646" />
+3. If $\text{cost} > \epsilon_2$, repeat from Step 4 (E-Step)
+4. If $\text{cost} \le \epsilon_2$, exit the loop
+#### Output:
+- Final converged translation offset $b$ and scale $\sigma$
+
+
+
+
+
+
+
+
 #### 1. Pose Rotation & Centering: Forward-propagate events to $T_{i+1}$, project them into the coordinate frame of $T_{i*}$ via $^{i*}R_i$, and subtract the projected feature center estimate
 #### 2. Expectation (E-Step): Compute correspondence probabilities between warped points $(\sigma y_k - b)$ and reference points $\tilde{l}_j^{i*}$: <img width="516" height="90" alt="image" src="https://github.com/user-attachments/assets/bf9f999b-78ed-41ee-b61e-153415d20640" />
 #### 3. Maximization (M-Step): Solve for optimal scale $\sigma$ and translation $b$ using scaled Iterative Closest Point (ICP): <img width="417" height="96" alt="image" src="https://github.com/user-attachments/assets/e5477398-d408-4ddf-9998-50f6a12770a5" /> <img width="412" height="232" alt="image" src="https://github.com/user-attachments/assets/3649e5e4-0e05-48f3-a697-01384cdff7fd" />
