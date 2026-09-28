@@ -101,7 +101,8 @@ ________________________________________________________________________________
 ##### Steps
 1. Estimate the uncorrected feature position at time $T_{i+1}$ using linear propagation: $f(T_i) + u_i dt_i$
 2. Append depth/homogeneous coordinates to each propagated point <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> and the estimated center $f(T_i) + u_i dt_i$
-3. Rotate both by $^{i^*}R_i$ and project back into normalized image coordinates via $\pi(\cdot)$: <img width="491" height="71" alt="image" src="https://github.com/user-attachments/assets/7547ef69-0595-4a30-a202-34842468aef7" />
+3. Rotate both by $^{i^*}R_i$ and project back into normalized image coordinates via $\pi(\cdot)$:
+- <img width="491" height="71" alt="image" src="https://github.com/user-attachments/assets/7547ef69-0595-4a30-a202-34842468aef7" />
 ##### Output:
 - Set of centered, rotation-compensated points $\{y_k^i\}_{k=1}^{n_i}$
 _____________________________________________________________________________________________________
@@ -158,18 +159,20 @@ ________________________________________________________________________________
 4. If $\text{cost} \le \epsilon_2$, exit the loop
 #### Output:
 - Final converged translation offset $b$ and scale $\sigma$
-
-
-
-
-
-
-
-
-#### 1. Pose Rotation & Centering: Forward-propagate events to $T_{i+1}$, project them into the coordinate frame of $T_{i*}$ via $^{i*}R_i$, and subtract the projected feature center estimate
-#### 2. Expectation (E-Step): Compute correspondence probabilities between warped points $(\sigma y_k - b)$ and reference points $\tilde{l}_j^{i*}$: <img width="516" height="90" alt="image" src="https://github.com/user-attachments/assets/bf9f999b-78ed-41ee-b61e-153415d20640" />
-#### 3. Maximization (M-Step): Solve for optimal scale $\sigma$ and translation $b$ using scaled Iterative Closest Point (ICP): <img width="417" height="96" alt="image" src="https://github.com/user-attachments/assets/e5477398-d408-4ddf-9998-50f6a12770a5" /> <img width="412" height="232" alt="image" src="https://github.com/user-attachments/assets/3649e5e4-0e05-48f3-a697-01384cdff7fd" />
-#### 4. State Adjustment: Iterate until cost change $< \epsilon_2$. Update the tracked feature center by combining estimated flow displacement with translation correction: <img width="225" height="35" alt="image" src="https://github.com/user-attachments/assets/f85f2273-1ee5-416b-b7e5-2fa1bc074cae" />
+_____________________________________________________________________________________________________
+#### 7. Apply Feature Drift Correction
+##### Goal: Adjust the feature's 2D position by integrating the optical flow and subtracting the template translation error
+##### Variables: 
+- $f$: 2D feature coordinates
+- $u$: Optical flow velocity
+- $dt_i$: Window interval
+- $b$: Converged translation offset from template alignment
+##### Steps:
+1. Propagate the feature coordinate along flow vector $u$ over window duration $dt_i$
+2. Subtract the estimated alignment offset $b$ to cancel accumulated drift:
+- <img width="137" height="28" alt="image" src="https://github.com/user-attachments/assets/3d17c2c6-e551-47c7-836d-743ec4384e2d" />
+##### Output:
+- Corrected 2D feature position $f(T_{i+1})$ ready for track server storage and odometry state updates
 
 ## Step 4: Feature Position Update & Adaptive Window Sizing
 ### Goal: 
