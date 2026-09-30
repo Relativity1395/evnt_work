@@ -187,9 +187,29 @@ ________________________________________________________________________________
 ##### Output:
 - Corrected 2D feature position $f(T_{i+1})$ ready for track server storage and odometry state updates
 
-## Step 4: Feature Position Update & Adaptive Window Sizing
+## Step 4: 2-point RANSAC (RANdom SAmple Consensus)
+### Goal: Remove features who tracking has failed using gyroscope data from IMU and frames of features from $T_{i+1}$ and $T_i$
+### Variables:
+- Candidate feature points at $T_i$
+- Updated candidate feature positions at $T_{i+1}$
+- State rotation estimate from IMU
+- Hyperparameters: Inlier threshold $\tau$ (maximum allowable Sampson error), RANSAC iteration limit $N$, confidence parameter $p$ (typically $0.99$)
+
+#### Analytical Process:
+1. Virtual Derotation
+2. Minimal Sample Generation
+3. Candidate Model Construction
+4. Epipolar Error Evaluation & Inlier Consensus
+5. Termination and Pruning
+
+#### Outputs: 
+- Inlier index set
+- Outlier index set
+- Estimated Essential matrix
+
+## Step 5: Feature Position Update & Adaptive Window Sizing
 ### Goal: 
-#### Complete 2-point RANSAC to remove features whose tracking has failed. Then calculate the temporal window duration $dt_{i+1}$ for the next tracking cycle. This ensures features travel roughly $k = 3$ pixels per window regardless of sensor velocity, preventing motion blur from violating the constant optical flow assumption
+#### Then calculate the temporal window duration $dt_{i+1}$ for the next tracking cycle. This ensures features travel roughly $k = 3$ pixels per window regardless of sensor velocity, preventing motion blur from violating the constant optical flow assumption
 ### Variables:
 - $k$: Target pixel travel distance (fixed at $3$ pixels)
 - $\Vert{}u_m\Vert{}_2$: Euclidean magnitude of optical flow for feature $m$
@@ -197,10 +217,10 @@ ________________________________________________________________________________
 - $dt(f_m) = \frac{k}{\Vert{}u_m\Vert{}_2}$: Window lifetime for feature $m$
 - $dt_{i+1}$: Window duration adopted for the subsequent tracking iteration
 
-###Analytical Process:
+### Analytical Process:
 #### 1. For each successfully tracked feature $m \in \mathcal{F}$, compute its travel time for $k$ pixels: $dt(f_m) = \frac{3}{\Vert{}u_m\Vert{}_2}$
-#### 2. Take the median over all features to reject outliers caused by degeneracies or aperture issues <img width="418" height="97" alt="image" src="https://github.com/user-attachments/assets/fe453db5-f126-4b77-bfcd-b6ea2b60a543" />
-#### 3. Pass $dt_{i+1}$ along with updated feature positions $\{f\}$ to the MSCKF state estimator and the next tracker call
+#### 3. Take the median over all features to reject outliers caused by degeneracies or aperture issues <img width="418" height="97" alt="image" src="https://github.com/user-attachments/assets/fe453db5-f126-4b77-bfcd-b6ea2b60a543" />
+#### 4. Pass $dt_{i+1}$ along with updated feature positions $\{f\}$ to the MSCKF state estimator and the next tracker call
 
 
 
