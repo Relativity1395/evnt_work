@@ -53,7 +53,17 @@ $$
 - $\epsilon_1$: Convergence tolerance threshold for the flow cost.
 
 ### Analytical Process
-#### 1. Expectation (E-Step): Displace current events backward to $T_i$ via $x_k - \bar{t}_k u$ and compute posterior probability weights against template points:
+#### 1. Expectation (E-Step): Discard invalid event-to-template pairs to accelerate correspondence matching and avoid tracking corruption. Also find the weighted probability that event originated from template point
+a. Displace current events backward to $T_i$: <img width="105" height="25" alt="image" src="https://github.com/user-attachments/assets/4e1aa22b-aaba-452f-a1e2-5cb142a2f4a2" />
+
+b. Outlier Rejection: Compute Mahalanobis distance between displaced event <img width="105" height="25" alt="image" src="https://github.com/user-attachments/assets/4e1aa22b-aaba-452f-a1e2-5cb142a2f4a2" /> and landmark projection <img width="25" height="25" alt="image" src="https://github.com/user-attachments/assets/f69c982c-ff11-42d3-9f83-c6ed8a752a13" />. 
+- Mahalanobis distance: <img width="917" height="115" alt="image" src="https://github.com/user-attachments/assets/0b6ebddc-7b0c-41e1-bd0a-980e954d1525" />
+We only want pairs (k, j) where $d_{k,j}$ <= 4 pixels
+Set $r_{kj}$ = 0 for all pairs where $d_{kj}$ > threashold
+
+
+
+c. Displace current events backward to $T_i$ via $x_k - \bar{t}_k u$ and compute posterior probability weights against template points:
 ####  <img width="578" height="96" alt="image" src="https://github.com/user-attachments/assets/db10868f-b9f3-438c-97ed-daa46389157f" />
 
 #### 2. Maximization (M-Step): Fix weights $r_{kj}$ and compute the optimal flow vector $u$ minimizing $\sum_k \sum_j r_{kj} \Vert{}(x_k - \bar{t}_k u) - \tilde{l}_j^{i-1}\Vert{}^2$:
@@ -111,10 +121,13 @@ ________________________________________________________________________________
 ##### Variables:
 - <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> : Points in the reference template recorded at onset time $T_{i^*}$
 - $\Sigma$: Measurement covariance matrix (set to $2I$)
-- $d_{\text{Mahalanobis}}$: Threshold distance (set to ? pixels)
+- $d_{\text{Mahalanobis}}$: Threshold distance (set to ?????? pixels)
 ##### Steps:
-1. Query the pre-built $k$-d tree of template points <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> for each centered point $y_k$
-2. Filter out point pairs whose Mahalanobis distance exceeds ? pixels
+1. Query the pre-built $k$-d tree of template points <img width="24" height="30" alt="image" src="https://github.com/user-attachments/assets/47e39bd9-0d9c-4593-8680-690307a43a45" /> for each centered point <img width="78" height="27" alt="image" src="https://github.com/user-attachments/assets/c0d2ccbd-756a-4eb5-84eb-e3f7983e73d3" />
+
+2. Filter out point pairs whose Mahalanobis distance exceeds ?????? pixels similar to EM 1
+   <img width="517" height="72" alt="image" src="https://github.com/user-attachments/assets/7c4cbb4d-99d2-4b6d-90ae-98c3370b2cee" />
+
 ##### Output: 
 - Pruned set of candidate pairs $(y_k^i, \tilde{l}_j^{i^*})$
 _____________________________________________________________________________________________________
@@ -176,7 +189,7 @@ ________________________________________________________________________________
 
 ## Step 4: Feature Position Update & Adaptive Window Sizing
 ### Goal: 
-#### Calculate the temporal window duration $dt_{i+1}$ for the next tracking cycle. This ensures features travel roughly $k = 3$ pixels per window regardless of sensor velocity, preventing motion blur from violating the constant optical flow assumption
+#### Complete 2-point RANSAC to remove features whose tracking has failed. Then calculate the temporal window duration $dt_{i+1}$ for the next tracking cycle. This ensures features travel roughly $k = 3$ pixels per window regardless of sensor velocity, preventing motion blur from violating the constant optical flow assumption
 ### Variables:
 - $k$: Target pixel travel distance (fixed at $3$ pixels)
 - $\Vert{}u_m\Vert{}_2$: Euclidean magnitude of optical flow for feature $m$
