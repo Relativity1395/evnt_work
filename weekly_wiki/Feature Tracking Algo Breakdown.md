@@ -219,8 +219,8 @@ ________________________________________________________________________________
 
 ### Analytical Process:
 #### 1. For each successfully tracked feature $m \in \mathcal{F}$, compute its travel time for $k$ pixels: $dt(f_m) = \frac{3}{\Vert{}u_m\Vert{}_2}$
-#### 3. Take the median over all features to reject outliers caused by degeneracies or aperture issues <img width="418" height="97" alt="image" src="https://github.com/user-attachments/assets/fe453db5-f126-4b77-bfcd-b6ea2b60a543" />
-#### 4. Pass $dt_{i+1}$ along with updated feature positions $\{f\}$ to the MSCKF state estimator and the next tracker call
+#### 2. Take the median over all features to reject outliers caused by degeneracies or aperture issues <img width="418" height="97" alt="image" src="https://github.com/user-attachments/assets/fe453db5-f126-4b77-bfcd-b6ea2b60a543" />
+#### 3. Pass $dt_{i+1}$ along with updated feature positions $\{f\}$ to the MSCKF state estimator and the next tracker call
 
 
 
