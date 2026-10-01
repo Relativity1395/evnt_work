@@ -5,6 +5,7 @@
 
 // Per-feature state / related events tracking
 
+
 class Feature{
     private:
         Eigen::Vector2d position;
@@ -17,8 +18,8 @@ class Feature{
 
     public:
         Feature(Eigen::Vector2d position,
+                std::vector<Event> currentEvents,
                 std::vector<Event> previousEvents,
-                std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
                 double xi
             );

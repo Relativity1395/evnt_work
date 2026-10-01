@@ -33,7 +33,7 @@ bool FastDetector::isFeature(const Event& e)
   const int ey = static_cast<int>(e.position.y());\
 
   const int pol = e.polarity ? 1 : 0;
-  sae_[pol](ey, ex) = e.timestamp;
+  sae_[pol](ex, ey) = e.timestamp; //same order as every read below
 
   const int max_scale = 1;
 
