@@ -19,6 +19,8 @@ struct ImuSample{
     double timestamp;
 };
 
+// Stores lists of events and imu samples from most recent camera packets
+// Use this in algorithms (for event : events ...)
 struct RawData {
     std::vector<Event> events;
     std::vector<ImuSample> imu_samples;
