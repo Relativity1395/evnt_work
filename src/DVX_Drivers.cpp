@@ -64,7 +64,7 @@ int main(void){
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
     cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
-
+    double highestTimestamp = 0;
     std::vector<Event> currEvents;
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
@@ -136,10 +136,10 @@ int main(void){
                     tempFeatures.clear();
                     for (int32_t j = 0; j < eventNum; j++) {
                         
-                        double highestTimestamp = 0;
+                        
                         currEvents.push_back(get_events(polarity, j));
-                        if (currentEvents.back().timestamp > highestTimestamp){
-                            highestTimestamp = currentEvents.back().timestamp
+                        if (currEvents.back().timestamp > highestTimestamp){
+                            highestTimestamp = currEvents.back().timestamp;
                         }
                         bool feature = detector.isFeature(currEvents.back());
 
@@ -147,7 +147,7 @@ int main(void){
                             for (int i = 0; i < (int)currFeatures.size(); i++){
                                 if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
                                     if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < 100){
-                                        Feature Feature(currEvents.back().timestamp, 0, {0}, {0}, Eigen::Vector2d(0,0), 15);
+                                        Feature Feature(currEvents.back().position, currEvents.back().timestamp, 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
                                         currFeatures.push_back(Feature);
                                         break;
                                     }
@@ -190,9 +190,9 @@ int main(void){
 
         
         currFeatures[i].checkHealth();
-        if (getDeadCycles() == 3){
+        if (currFeatures[i].getDeadCycles() == 3){
             currFeatures.erase(currFeatures.begin() + i);
-            continue
+            continue;
         }
         currFeatures[i].updateTimeWindow(highestTimestamp);
         currFeatures[i].setEvents();
