@@ -1,5 +1,5 @@
 1. make sammy's function a method - complete
- - make aaron's stuff method as well
+    - make aaron's stuff method as well
 2. add optical flow track stuff
     - Add time window check
     - Add health identifier

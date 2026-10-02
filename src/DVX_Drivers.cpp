@@ -135,9 +135,12 @@ int main(void){
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
                     tempFeatures.clear();
                     for (int32_t j = 0; j < eventNum; j++) {
-                    
+                        
+                        double highestTimestamp = 0;
                         currEvents.push_back(get_events(polarity, j));
-                         //test push
+                        if (currentEvents.back().timestamp > highestTimestamp){
+                            highestTimestamp = currentEvents.back().timestamp
+                        }
                         bool feature = detector.isFeature(currEvents.back());
 
                         if (feature == true){
@@ -183,10 +186,15 @@ int main(void){
     for (int i = 0; i < (int)currFeatures.size(); i++){
         currFeatures[i].findEvents(currEvents);
         currFeatures[i].propagatePreviousEvents();
-        //calculate optimization here
-        //while loop calculating weight and flow until convergance
+        
 
-        currFeatures[i].updateTimeWindow();
+        
+        currFeatures[i].checkHealth();
+        if (getDeadCycles() == 3){
+            currFeatures.erase(currFeatures.begin() + i);
+            continue
+        }
+        currFeatures[i].updateTimeWindow(highestTimestamp);
         currFeatures[i].setEvents();
     }
     caerEventPacketContainerFree(packetContainer);

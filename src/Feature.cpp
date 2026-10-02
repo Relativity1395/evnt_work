@@ -54,7 +54,7 @@ void Feature::findEvents(const std::vector<Event>& E){
     }
 }   
 
-void Feature::updateTimeWindow(){
+void Feature::updateTimeWindow(double highestTimestamp){
     if (dti == 0){
         if (currentEvents.size() < 300){
             dti = 0;
@@ -62,11 +62,12 @@ void Feature::updateTimeWindow(){
             dti = currentEvents.back().timestamp - Ti;
         }
     }else{
-
+        if (highestTimestamp >= Ti + dti){
         Ti = Ti + dti;
         dti = 3.0/getMedianMagnitude();
         if (dti >= 1000000){
             dti = 1000000;
+        }
         }
     }
 }
@@ -160,4 +161,17 @@ double Feature::getMedianMagnitude() {
         auto max_it = std::max_element(magnitudes.begin(), magnitudes.begin() + n);
         return (*max_it + magnitudes[n]) / 2.0;
     }
+}
+
+bool Feature::checkHealth(){
+    badHealth = (!converged) && (currentEvents.size() < 5);
+    if (badHealth){
+        deadCycles++;
+        return 1;
+    }
+}
+
+int Feature::getDeadCycles(){
+    int dCycle = deadCycles;
+    return dCycle;
 }

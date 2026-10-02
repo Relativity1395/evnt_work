@@ -18,6 +18,9 @@ class Feature{
         std::vector<Eigen::Vector2d> landmark;
         std::vector<Eigen::Vector2d> t_flow;
         std::vector<std::vector<Association>> weights;
+        bool badHealth;
+        bool converged;
+        int deadCycles;
 
     public:
         Feature(Eigen::Vector2d position,
@@ -32,10 +35,12 @@ class Feature{
         const std::vector<Eigen::Vector2d>& getLandmark() const;
         void setEvents();
         void findEvents(const std::vector<Event>& E);
-        void updateTimeWindow();
+        void updateTimeWindow(double highestTimestamp);
         std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> generateKD();
         Eigen::Vector2d getPosition();
         void updateFeature();
         double getMedianMagnitude();
+        bool checkHealth();
+        int getDeadCycles();
      
     };
