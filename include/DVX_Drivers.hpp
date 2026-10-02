@@ -54,6 +54,9 @@ typedef struct {
 
 static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal);
-int get_events(void);
+
+Event get_event(caerPolarityEventPacket polarity, int j);
+ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j);
+RawData get_raw_data(caerDeviceHandle dvxplr_hndl);
 
 #endif

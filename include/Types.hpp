@@ -19,5 +19,10 @@ struct ImuSample{
     double timestamp;
 };
 
+struct RawData {
+    std::vector<Event> events;
+    std::vector<ImuSample> imu_samples;
+};
+
 // Pose?
 // state stuff?
