@@ -5,9 +5,9 @@
 
 
 double calculateCost(
-    std::vector<Event>& currentEvents,
-    Eigen::Vector2d u,
-    std::vector<std::vector<Association>>& weights,
-    std::vector<Eigen::Vector2d>&landmarks,
+    const std::vector<Event>& currentEvents,
+    const Eigen::Vector2d u,
+    const std::vector<std::vector<Association>>& weights,
+    const std::vector<Eigen::Vector2d>&landmarks,
     double Ti
 );
