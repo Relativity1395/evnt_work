@@ -62,6 +62,7 @@ void Feature::updateTimeWindow(){
             dti = currentEvents.back().timestamp - Ti;
         }
     }else{
+
         Ti = Ti + dti;
         dti = 3.0/getMedianMagnitude();
         if (dti >= 1000000){
@@ -98,9 +99,31 @@ std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generat
         if (nMatches > 0){
             totMatches.push_back(ret_matches);
         }
+
+
     }
 
-    return totMatches;
+    for (std::size_t k = 0; k < totMatches.size(); ++k) {
+        auto& eventWeights = weights[k];
+        eventWeights.reserve(totMatches[k].size());
+
+        double sum = 0.0;
+
+        // Calculate gaussian scores and their sum
+        for (const auto& match : totMatches[k]) {
+            const double score = std::exp(-match.second / 4.0);
+
+            eventWeights.push_back({match.first, score});
+            sum += score;
+        }
+
+        // Divide each score by the sum to obtain rkj
+        for (auto& association : eventWeights) {
+            association.weight /= sum;
+        }
+    }
+
+    // return totMatches;
 
 }
 

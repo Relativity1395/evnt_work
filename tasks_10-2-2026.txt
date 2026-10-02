@@ -1,0 +1,10 @@
+1. make sammy's function a method - complete
+ - make aaron's stuff method as well
+2. add optical flow track stuff
+    - Add time window check
+    - Add health identifier
+    - add while loop for cost function
+    - find cost convergence parameter
+    -make function to kill feature
+3. Integrate Kawsar's event struct into logic
+4. Merge anything else

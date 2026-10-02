@@ -2,7 +2,7 @@
 
 #include <../third_party/KDTreeVectorOfVectorsAdaptor.h>
 #include <../include/Types.hpp>
-
+#include <../include/WeightDist.hpp>
 // Per-feature state / related events tracking
 
 class Feature{
@@ -17,6 +17,7 @@ class Feature{
         std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
         std::vector<Eigen::Vector2d> t_flow;
+        std::vector<std::vector<Association>> weights;
 
     public:
         Feature(Eigen::Vector2d position,
