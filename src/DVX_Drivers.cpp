@@ -142,7 +142,7 @@ int main(void){
                             highestTimestamp = currEvents.back().timestamp;
                         }
                         bool feature = detector.isFeature(currEvents.back());
-
+                        //test push main
                         if (feature == true){
                             for (int i = 0; i < (int)currFeatures.size(); i++){
                                 if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
