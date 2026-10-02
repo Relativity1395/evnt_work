@@ -13,7 +13,8 @@
 #### **Step 1:** Spatiotemporal Neighborhood Extraction ($W_i$)
 #### **Step 2:** EM 1 — Optical Flow Optimization ($u$)
 #### **Step 3:** EM 2 — Template Alignment & Drift Correction ($\sigma, b$)
-#### **Step 4:** Feature Position Update & Adaptive Window Sizing
+#### **Step 4:** 2-point RANSAC (RANdom SAmple Consensus)
+#### **Step 5:** Feature Position Update & Adaptive Window Sizing
 
 ## Step 1: Spatiotemporal Neighborhood Extraction ($W_i$)
 ### Goal: 
