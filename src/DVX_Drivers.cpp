@@ -12,17 +12,12 @@ static void usbShutdownHandler(void *ptr) {
     globalShutdown.store(true);
 }
 
-
-// int trackFeatures(feature_t feat){
-    
-// }
-
-
-Event get_events(caerPolarityEventPacket polarity, int j){
+Event get_event(caerPolarityEventPacket polarity, int j) {
     Event evnt;
 
     caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
-    if (!caerPolarityEventIsValid(evt)){
+
+    if (!caerPolarityEventIsValid(evt)) {
         exit(EXIT_FAILURE);
     }
 
@@ -32,6 +27,68 @@ Event get_events(caerPolarityEventPacket polarity, int j){
 
     return evnt;
 }
+
+
+ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
+    ImuSample sample;
+
+    caerIMU6Event imuEvent = caerIMU6EventPacketGetEvent(imuPacket, j);
+
+    if (!caerIMU6EventIsValid(imuEvent)) {
+        exit(EXIT_FAILURE);
+    }
+
+    sample.timestamp = (double) caerIMU6EventGetTimestamp64(imuEvent, imuPacket);
+    sample.accel << (double) caerIMU6EventGetAccelX(imuEvent), (double) caerIMU6EventGetAccelY(imuEvent), (double) caerIMU6EventGetAccelZ(imuEvent);
+    sample.gyro << (double) caerIMU6EventGetGyroX(imuEvent), (double) caerIMU6EventGetGyroY(imuEvent), (double) caerIMU6EventGetGyroZ(imuEvent);
+
+    return sample;
+}
+
+
+RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
+    RawData data;
+    caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
+
+    if (packetContainer == NULL) {
+        return data;
+    }
+
+    int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+
+    for (int32_t i = 0; i < packetNum; i++) {
+        caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
+
+        if (packetHeader == NULL) {
+            continue;
+        }
+
+        int eventType = caerEventPacketHeaderGetEventType(packetHeader);
+
+        if (eventType == POLARITY_EVENT) {
+            caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+            int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+
+            for (int32_t j = 0; j < eventNum; j++) {
+                data.events.push_back(get_event(polarity, j));
+            }
+        }
+
+        else if (eventType == IMU6_EVENT) {
+            caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
+            int32_t imuNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+
+            for (int32_t j = 0; j < imuNum; j++) {
+                data.imu_samples.push_back(get_imu_sample(imuPacket, j));
+            }
+        }
+    }
+
+    caerEventPacketContainerFree(packetContainer);
+
+    return data;
+}
+
 
 int main(void){
 #if defined(_WIN32)
@@ -130,7 +187,7 @@ int main(void){
                     
                     
     
-                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT){
+                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
                     caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
                     tempFeatures.clear();
@@ -207,6 +264,7 @@ int main(void){
 
     
 }
+
 caerDeviceDataStop(dvxplr_hndl);
     caerDeviceClose(&dvxplr_hndl);
     // cv::destroyAllWindows();
