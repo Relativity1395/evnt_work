@@ -21,6 +21,9 @@ struct Event{
     PixelCoord position; //pixel x and y
     uint32_t timestamp; //microseconds
     bool polarity; //true = brightness increased
+
+    Eigen::Vector2d pos() const { return position.cast<double>(); }
+    double t() const { return static_cast<double>(timestamp); }
 };
 
 static_assert(sizeof(Event) == 12, "Event grew, check its field types");

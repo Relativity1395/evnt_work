@@ -32,8 +32,8 @@ void Feature::findEvents(const std::vector<Event>& E){
     currentEvents.clear();
     bProp.clear();
     for(const Event& event : E){
-        Eigen::Vector2d x = event.position;
-        double tbar = event.timestamp - Ti;
+        Eigen::Vector2d x = event.pos();
+        double tbar = event.t() - Ti;
         Eigen::Vector2d u = flow;
         Eigen::Vector2d fti = position;
         Eigen::Vector2d backProp = x - tbar * u;
@@ -77,15 +77,15 @@ void Feature::propagatePreviousEvents(){
 
     if (dti != 0){
         for(const Event& event : previousEvents){
-            Eigen::Vector2d x = event.position;
-            double t = event.timestamp;
+            Eigen::Vector2d x = event.pos();
+            double t = event.t();
             Eigen::Vector2d propagatedEvent = x + (Ti - t)*flow;
             landmark.push_back(propagatedEvent);
         }
     }
 } 
 
-std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generateKD(){
+void Feature::generateKD(){
 
     const double r2 = 4.2426;
     const int dim = 2;
@@ -125,7 +125,7 @@ std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> Feature::generat
         }
     }
 
-    // return totMatches;
+
 
 }
 

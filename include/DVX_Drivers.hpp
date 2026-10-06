@@ -5,7 +5,7 @@
 #include <libcaer/events/imu6.h>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
-
+#include "../include/Types.hpp"
 #include <signal.h>
 #include <atomic>
 #include <cstdio>

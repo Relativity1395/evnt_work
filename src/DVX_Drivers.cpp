@@ -1,5 +1,4 @@
 #include "../include/DVX_Drivers.hpp"
-#include "../include/Types.hpp"
 #include "../third_party/fast_detector.h"
 #include "../include/Feature.hpp"
 
@@ -196,7 +195,7 @@ int main(void){
                     for (int32_t j = 0; j < eventNum; j++) {
                         
                         
-                        currEvents.push_back(get_events(polarity, j));
+                        currEvents.push_back(get_event(polarity, j));
                         if (currEvents.back().timestamp > highestTimestamp){
                             highestTimestamp = currEvents.back().timestamp;
                         }
@@ -206,7 +205,7 @@ int main(void){
                             for (int i = 0; i < (int)currFeatures.size(); i++){
                                 if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
                                     if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < 100){
-                                        Feature Feature(currEvents.back().position, currEvents.back().timestamp, 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
+                                        Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
                                         currFeatures.push_back(Feature);
                                         break;
                                     }

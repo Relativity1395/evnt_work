@@ -19,7 +19,7 @@ find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
 # evio_core algorithm itself
 add_library(evio_core STATIC
-  src/RawAdapter.cpp
+  # src/RawAdapter.cpp
   src/Feature.cpp
   src/FeatureDetector.cpp
   src/OpticalFlow.cpp

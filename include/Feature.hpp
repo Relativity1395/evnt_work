@@ -27,6 +27,7 @@ class Feature{
         Feature(Eigen::Vector2d position,
                 double Ti,
                 double dti,
+                std::vector<Event> currentEvents,
                 std::vector<Event> previousEvents,
                 Eigen::Vector2d flow,
                 double xi
@@ -36,7 +37,7 @@ class Feature{
         void setEvents();
         void findEvents(const std::vector<Event>& E);
         void updateTimeWindow(double highestTimestamp);
-        std::vector<std::vector<nanoflann::ResultItem<size_t, double>>> generateKD();
+        void generateKD();
         Eigen::Vector2d getPosition();
         void updateFeature();
         double getMedianMagnitude();
