@@ -30,6 +30,7 @@ void Feature::setEvents(){
 
 void Feature::findEvents(const std::vector<Event>& E){
     currentEvents.clear();
+    bProp.clear();
     for(const Event& event : E){
         Eigen::Vector2d x = event.position;
         double tbar = event.timestamp - Ti;

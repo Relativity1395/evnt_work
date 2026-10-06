@@ -5,6 +5,7 @@
 #pragma once
 #include "timer.h"
 #include "../include/DVX_Drivers.hpp"
+#include "../include/Types.hpp" //for Event
 
 namespace corner_event_detector
 {

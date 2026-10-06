@@ -20,10 +20,12 @@ Event get_event(caerPolarityEventPacket polarity, int j) {
     if (!caerPolarityEventIsValid(evt)) {
         exit(EXIT_FAILURE);
     }
-
-    evnt.position << (double) caerPolarityEventGetX(evt), (double) caerPolarityEventGetY(evt);
+    //X and Y already come back as uint16_t, the same type PixelCoord stores, 
+    evnt.position << caerPolarityEventGetX(evt), caerPolarityEventGetY(evt);
     evnt.polarity = caerPolarityEventGetPolarity(evt);
-    evnt.timestamp = (double) caerPolarityEventGetTimestamp64(evt, polarity);
+    // time stamp 64 is int64 microsecons; event keep uint32 (matches event_t)
+    //which wraps after 71.6 minutes of camera uptime. So we use the 64 bit version to avoid wrap around issues.
+    evnt.timestamp = static_cast<uint32_t>(caerPolarityEventGetTimestamp64(evt, polarity));
 
     return evnt;
 }

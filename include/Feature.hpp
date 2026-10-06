@@ -5,6 +5,7 @@
 #include <../include/WeightDist.hpp>
 // Per-feature state / related events tracking
 
+
 class Feature{
     private:
         Eigen::Vector2d position;
@@ -27,7 +28,6 @@ class Feature{
                 double Ti,
                 double dti,
                 std::vector<Event> previousEvents,
-                std::vector<Event> currentEEvents,
                 Eigen::Vector2d flow,
                 double xi
             );
