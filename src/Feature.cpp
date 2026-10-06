@@ -39,8 +39,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         Eigen::Vector2d backProp = x - tbar * u;
         Eigen::Vector2d V = backProp - fti;
         if (dti == 0){
-            if(previousEvents.size() < 300 && x.norm() <= xi){
-                currentEvents.insert(currentEvents.end(), previousEvents.begin(), previousEvents.begin());
+            if(currentEvents.size() < 300 && x.norm() <= xi){
                 currentEvents.push_back(event);
                 bProp.push_back(backProp);
             }
@@ -175,4 +174,50 @@ bool Feature::checkHealth(){
 int Feature::getDeadCycles(){
     int dCycle = deadCycles;
     return dCycle;
+}
+
+double Feature::calculateCost(){
+     double cost = 0.0;
+
+    for(std::size_t k = 0; k < currentEvents.size(); ++k){
+        Eigen::Vector2d xk = currentEvents[k].pos();
+        double tbar = currentEvents[k].t() - Ti;
+        for(const Association& association : weights[k]){
+            double rkj = association.weight;
+            std::size_t j = association.landmarkIndex;
+            Eigen::Vector2d currLandmark = landmark[j];
+            Eigen::Vector2d mag = (xk - tbar * flow) - currLandmark;
+            cost += rkj * mag.squaredNorm();
+            
+        }
+    }
+            
+        return cost;
+}
+
+Eigen::Vector2d Feature::updateFlow(){
+    Eigen::Vector2d numerator(0.0,0.0);
+        double denominator = 0.0;
+
+        for(std::size_t k = 0; k < currentEvents.size(); ++k){
+            Eigen::Vector2d xk = currentEvents[k].pos();
+            double tbar = currentEvents[k].t() - Ti;
+            for(const Association& association : weights[k]){
+                double rkj = association.weight;
+                std::size_t j = association.landmarkIndex;
+                Eigen::Vector2d currLandmark = landmark[j];
+                numerator += rkj*(xk - currLandmark) * tbar;
+                denominator += rkj * std::pow(tbar, 2);
+            }
+        }
+        Eigen::Vector2d u = numerator/denominator;
+        return u;
+}
+
+bool Feature::checkWindow(){
+    return (dti > 0 );
+}
+
+bool Feature::checkInitWindow(){
+    return (currentEvents.size() >= 300);
 }

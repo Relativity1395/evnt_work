@@ -127,6 +127,7 @@ int main(void){
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
+    const double epsilon = 0.5;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
@@ -241,19 +242,28 @@ int main(void){
             
             
     }
+
+    
     for (int i = 0; i < (int)currFeatures.size(); i++){
         currFeatures[i].findEvents(currEvents);
         currFeatures[i].propagatePreviousEvents();
         
-
-        
-        currFeatures[i].checkHealth();
-        if (currFeatures[i].getDeadCycles() == 3){
-            currFeatures.erase(currFeatures.begin() + i);
-            continue;
+        if (currFeatures[i].checkWindow()){
+            while (currFeatures[i].calculateCost() > epsilon){
+                currFeatures[i].generateKD();
+                currFeatures[i].updateFlow();
+            }
+            
+            currFeatures[i].checkHealth();
+            if (currFeatures[i].getDeadCycles() == 3){
+                currFeatures.erase(currFeatures.begin() + i);
+                continue;
+            }
         }
-        currFeatures[i].updateTimeWindow(highestTimestamp);
-        currFeatures[i].setEvents();
+        if (currFeatures[i].checkInitWindow()){
+            currFeatures[i].updateTimeWindow(highestTimestamp);
+            currFeatures[i].setEvents();
+        }
     }
     caerEventPacketContainerFree(packetContainer);
 

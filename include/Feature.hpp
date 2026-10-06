@@ -43,5 +43,9 @@ class Feature{
         double getMedianMagnitude();
         bool checkHealth();
         int getDeadCycles();
+        double calculateCost();
+        Eigen::Vector2d updateFlow();
+        bool checkWindow();
+        bool checkInitWindow();
      
     };
