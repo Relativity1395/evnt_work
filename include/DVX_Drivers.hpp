@@ -21,6 +21,7 @@
 #define DVX_DRIVERS_H
 #define WIDTH 640
 #define HEIGHT 480
+#define MAXFEAT 100
 
 // uint16_t **sae = (uint16_t**)malloc((WIDTH*HEIGHT)*sizeof(uint16_t*));
 

@@ -1,6 +1,7 @@
 #include "../include/DVX_Drivers.hpp"
 #include "../third_party/fast_detector.h"
 #include "../include/Feature.hpp"
+#include "../include/OpticalFlow.hpp"
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -205,7 +206,7 @@ int main(void){
                         if (feature == true){
                             for (int i = 0; i < (int)currFeatures.size(); i++){
                                 if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
-                                    if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < 100){
+                                    if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
                                         Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
                                         currFeatures.push_back(Feature);
                                         break;
@@ -243,26 +244,11 @@ int main(void){
             
     }
 
-    
+    int temp[] = {};
     for (int i = 0; i < (int)currFeatures.size(); i++){
-        currFeatures[i].findEvents(currEvents);
-        currFeatures[i].propagatePreviousEvents();
-        
-        if (currFeatures[i].checkWindow()){
-            while (currFeatures[i].calculateCost() > epsilon){
-                currFeatures[i].generateKD();
-                currFeatures[i].updateFlow();
-            }
-            
-            currFeatures[i].checkHealth();
-            if (currFeatures[i].getDeadCycles() == 3){
-                currFeatures.erase(currFeatures.begin() + i);
-                continue;
-            }
-        }
-        if (currFeatures[i].checkInitWindow()){
-            currFeatures[i].updateTimeWindow(highestTimestamp);
-            currFeatures[i].setEvents();
+        int feature = FeatureCollection(currFeatures[i]);
+        switch feature{
+            case 
         }
     }
     caerEventPacketContainerFree(packetContainer);
