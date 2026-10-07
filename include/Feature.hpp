@@ -36,6 +36,7 @@ class Feature{
         const std::vector<Eigen::Vector2d>& getLandmark() const;
         void setEvents();
         void findEvents(const std::vector<Event>& E);
+        bool findEventsInit(const std::vector<Event>& E);
         void updateTimeWindow(double highestTimestamp);
         void generateKD();
         Eigen::Vector2d getPosition();

@@ -1,17 +1,24 @@
 #include <../include/OpticalFlow.hpp>
-void initFeature(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
-    F.findEvents(currEvents);
-        F.propagatePreviousEvents();
-        
-        if (F.checkWindow()){
-            while (F.calculateCost() > epsilon){
-                F.generateKD();
-                F.updateFlow();
-            }
-            
+
+#define MAXITR 50000
+bool FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
+    if (!F.checkWindow()){
+        if (!F.findEventsInit(currEvents)){
+            return false;
         }
-        if (F.checkInitWindow()){
-            F.updateTimeWindow(highestTimestamp);
-            F.setEvents();
-        }
+    }else{
+        F.findEvents(currEvents); //collects current events within spatiotmeporal window
+        F.propagatePreviousEvents(); //turns previous events into landmarks
+        F.calculateCost();
+        int iter = 0;
+        while (F.calculateCost() > epsilon && iter < MAXITR){
+            F.generateKD(); //generates r_kj points
+            F.updateFlow(); //updates optical flow
+        }  
+    }   
+    F.updateTimeWindow(highestTimestamp); //updates timewindow
+    F.setEvents();
+
+    return true;
+
 }

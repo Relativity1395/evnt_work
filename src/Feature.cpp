@@ -38,29 +38,34 @@ void Feature::findEvents(const std::vector<Event>& E){
         Eigen::Vector2d fti = position;
         Eigen::Vector2d backProp = x - tbar * u;
         Eigen::Vector2d V = backProp - fti;
-        if (dti == 0){
-            if(currentEvents.size() < 300 && x.norm() <= xi){
+        if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
+            if(V.norm() <= xi){
                 currentEvents.push_back(event);
                 bProp.push_back(backProp);
             }
-        }else{
-            if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
-                if(V.norm() <= xi){
-                    currentEvents.push_back(event);
-                    bProp.push_back(backProp);
-                }
-            }
+        }
         }
     }
-}   
 
+bool Feature::findEventsInit(const std::vector<Event>& E){
+    for(const Event& event : E){
+        Eigen::Vector2d x = event.pos();
+        double tbar = event.t() - Ti;
+        Eigen::Vector2d u = flow;
+        Eigen::Vector2d fti = position;
+        Eigen::Vector2d backProp = x - tbar * u;
+        Eigen::Vector2d V = backProp - fti;
+
+        if (event.t() <= 300 && x.norm() < xi){
+            currentEvents.push_back(event);
+            bProp.push_back(backProp);
+        }
+    } 
+    return checkInitWindow();  
+}
 void Feature::updateTimeWindow(double highestTimestamp){
     if (dti == 0){
-        if (currentEvents.size() < 300){
-            dti = 0;
-        }else if (currentEvents.size() >= 300){
-            dti = currentEvents.back().timestamp - Ti;
-        }
+        dti = currentEvents.back().t() - Ti;
     }else{
         if (highestTimestamp >= Ti + dti){
         Ti = Ti + dti;
