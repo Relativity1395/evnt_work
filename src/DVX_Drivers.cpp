@@ -244,13 +244,18 @@ int main(void){
             
     }
 
-    int temp[] = {};
+    std::vector<int> temp;
     for (int i = 0; i < (int)currFeatures.size(); i++){
-        int feature = FeatureCollection(currFeatures[i]);
-        switch feature{
-            case 
+        if (FeatureCollection(currFeatures[i]) == 1){
+            temp[i] = i;
         }
+        
     }
+
+    for (int i = 0; i < (int)temp.size(); i++){
+        currFeatures.erase(currFeatures.begin() + i);
+    }
+    
     caerEventPacketContainerFree(packetContainer);
 
     // fade the whole canvas toward black so old corners decay
