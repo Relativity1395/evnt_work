@@ -3,6 +3,7 @@
 #include <../third_party/KDTreeVectorOfVectorsAdaptor.h>
 #include <../include/Types.hpp>
 #include <../include/WeightDist.hpp>
+#define MAXDELT 1000000
 // Per-feature state / related events tracking
 
 
@@ -37,12 +38,12 @@ class Feature{
         void setEvents();
         void findEvents(const std::vector<Event>& E);
         bool findEventsInit(const std::vector<Event>& E);
-        void updateTimeWindow(double highestTimestamp);
+        bool updateTimeWindow(double highestTimestamp);
         void generateKD();
         Eigen::Vector2d getPosition();
         void updateFeature();
         double getMedianMagnitude();
-        bool checkHealth();
+        int checkHealth();
         int getDeadCycles();
         double calculateCost();
         Eigen::Vector2d updateFlow();

@@ -56,38 +56,39 @@ bool Feature::findEventsInit(const std::vector<Event>& E){
         Eigen::Vector2d backProp = x - tbar * u;
         Eigen::Vector2d V = backProp - fti;
 
-        if (event.t() <= 300 && x.norm() < xi){
+        if (E.size() <= 300 && V.norm() < xi){
             currentEvents.push_back(event);
             bProp.push_back(backProp);
         }
     } 
     return checkInitWindow();  
 }
-void Feature::updateTimeWindow(double highestTimestamp){
+bool Feature::updateTimeWindow(double highestTimestamp){
     if (dti == 0){
         dti = currentEvents.back().t() - Ti;
+        return true;
     }else{
         if (highestTimestamp >= Ti + dti){
-        Ti = Ti + dti;
-        dti = 3.0/getMedianMagnitude();
-        if (dti >= 1000000){
-            dti = 1000000;
-        }
-        }
+            Ti = Ti + dti;
+            dti = 3.0/getMedianMagnitude();
+            if (dti >= MAXDELT){
+                dti = MAXDELT;
+            }
+            return true;
+        } 
     }
-}
+    return false;
+}   
 void Feature::propagatePreviousEvents(){
     landmark.clear();
-
-    if (dti != 0){
-        for(const Event& event : previousEvents){
-            Eigen::Vector2d x = event.pos();
-            double t = event.t();
-            Eigen::Vector2d propagatedEvent = x + (Ti - t)*flow;
-            landmark.push_back(propagatedEvent);
-        }
+    for(const Event& event : previousEvents){
+        Eigen::Vector2d x = event.pos();
+        double t = event.t();
+        Eigen::Vector2d propagatedEvent = x + (Ti - t)*flow;
+        landmark.push_back(propagatedEvent);
     }
-} 
+}
+
 
 void Feature::generateKD(){
 
@@ -168,12 +169,13 @@ double Feature::getMedianMagnitude() {
     }
 }
 
-bool Feature::checkHealth(){
+int Feature::checkHealth(){
     badHealth = (!converged) && (currentEvents.size() < 5);
     if (badHealth){
         deadCycles++;
-        return 1;
+        
     }
+    return deadCycles;
 }
 
 int Feature::getDeadCycles(){
