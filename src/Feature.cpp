@@ -169,12 +169,10 @@ double Feature::getMedianMagnitude() {
     }
 }
 
-int Feature::checkHealth(){
-    badHealth = (!converged) && (currentEvents.size() < 5);
-    if (badHealth){
-        deadCycles++;
-        
-    }
+int Feature::checkHealth(double cost, double epsilon){
+    converged = cost < epsilon;
+    badHealth = (!converged) || (currentEvents.size() < MINEVNT);
+    deadCycles = badHealth ? deadCycles + 1 : 0;
     return deadCycles;
 }
 
@@ -222,9 +220,16 @@ Eigen::Vector2d Feature::updateFlow(){
 }
 
 bool Feature::checkWindow(){
-    return (dti > 0 );
+    return (dti > 0);
 }
 
 bool Feature::checkInitWindow(){
     return (currentEvents.size() >= 300);
+}
+
+void Feature::killFeature(){
+    dead = true;
+}
+bool Feature::getLife(){
+    return dead;
 }

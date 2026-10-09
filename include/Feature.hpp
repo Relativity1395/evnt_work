@@ -4,6 +4,7 @@
 #include <../include/Types.hpp>
 #include <../include/WeightDist.hpp>
 #define MAXDELT 1000000
+#define MINEVNT 300
 // Per-feature state / related events tracking
 
 
@@ -23,6 +24,7 @@ class Feature{
         bool badHealth;
         bool converged;
         int deadCycles;
+        bool dead;
 
     public:
         Feature(Eigen::Vector2d position,
@@ -43,11 +45,13 @@ class Feature{
         Eigen::Vector2d getPosition();
         void updateFeature();
         double getMedianMagnitude();
-        int checkHealth();
+        int checkHealth(double cost, double epsilon);
         int getDeadCycles();
         double calculateCost();
         Eigen::Vector2d updateFlow();
         bool checkWindow();
         bool checkInitWindow();
+        void killFeature();
+        bool getLife();
      
     };

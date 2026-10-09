@@ -205,7 +205,12 @@ int main(void){
                         //test push main
                         if (feature == true){
                             for (int i = 0; i < (int)currFeatures.size(); i++){
-                                if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
+                                if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1 && currFeatures[i].checkLife){
+                                    Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
+                                    currFeatures[i] = Feature;
+                                    break;
+                                }
+                                else if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
                                     if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
                                         Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
                                         currFeatures.push_back(Feature);

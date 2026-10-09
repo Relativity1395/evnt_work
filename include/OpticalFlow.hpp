@@ -1,7 +1,8 @@
 #include "Feature.hpp"
 #include "../include/Types.hpp"
 #include <stdlib.h>
-
+#define MAXITR 50000
+#define MAXHEALTH 3
 enum FeatureState {
     INIT = 0,
     DEAD = 1, 
