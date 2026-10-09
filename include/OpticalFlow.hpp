@@ -1,11 +1,14 @@
 #include "Feature.hpp"
-#include "../include/Types.hpp"
-#include <stdlib.h>
+#include "CalculateCost.hpp"
+#include "WeightDist.hpp"
+#include "updateFlow.hpp"
+void checkInitFeature(Eigen::Vector2d);
 
-enum FeatureState {
-    INIT = 0,
-    DEAD = 1, 
-    HEALTHY = 2
-};
-void checkInitFeature(Event& e);
-int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp);
+Eigen::Vector2d em1(const Feature& feature,
+                    const std::vector<Event>& currentEvents,
+                    const std::vector<Eigen::Vector2d>& landmarks,
+                    Eigen::Vector2d ui,
+                    double Ti,
+                    double epsilon1,
+                    int maxIterations
+                );

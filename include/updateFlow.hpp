@@ -2,7 +2,7 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "Types.hpp"
-#include "weightDist.hpp"
+#include "WeightDist.hpp"
 
 Eigen::Vector2d updateFlow(
         const   std::vector<Event>& currentEvents,
