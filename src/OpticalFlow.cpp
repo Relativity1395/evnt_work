@@ -9,7 +9,7 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
     }else{
         F.findEvents(currEvents); //collects current events within spatiotmeporal window
         F.propagatePreviousEvents(); //turns previous events into landmarks
-        F.calculateCost();
+        F.generateKD();
         int iter = INIT;
         while (F.calculateCost() > epsilon && iter < MAXITR){
             if (iter != 0){
