@@ -129,6 +129,9 @@ int main(void) {
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
     const double epsilon = 0.5;
+    const double minFeatureDist = 5.0;
+    // before the while loop
+    size_t detCount = 0, evCount = 0;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
@@ -202,10 +205,30 @@ int main(void) {
                             highestTimestamp = currEvents.back().timestamp;
                         }
                         bool feature = detector.isFeature(currEvents.back());
+                        // right after: bool feature = detector.isFeature(currEvents.back());
+                        evCount++;
+                        if (feature) detCount++;
                         //test push main
                         if (feature == true){
+                            
+
+                        
+
+                        
+                            const Event &ev = currEvents.back();
+                            bool isNew = true;
+                            for (Feature& f : currFeatures) {
+                                if ((ev.position.cast<double>() - f.getPosition().cast<double>()).norm() < minFeatureDist) {
+                                    isNew = false;
+                                    break;
+                                }
+                            }
+                            if (isNew && currFeatures.size() < MAXFEAT) {
+                                currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
+                                                        std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
+                            }
                             for (int i = 0; i < (int)currFeatures.size(); i++){
-                                if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1){
+                                if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
                                     if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
                                         Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
                                         currFeatures.push_back(Feature);
@@ -232,6 +255,7 @@ int main(void) {
             }
             
             std::cout << "Features detected: " << currFeatures.size() << '\n';
+            
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 std::cout << "Calling FeatureCollection\n";
 
@@ -240,6 +264,9 @@ int main(void) {
                 );
 
                 std::cout << "FeatureCollection returned: " << result << '\n';
+                // next to your "Features detected" print
+                std::cout << "events: " << evCount << "  detector true: " << detCount
+                << "  MAXFEAT: " << MAXFEAT << '\n';
             }
                 
             caerEventPacketContainerFree(packetContainer);
