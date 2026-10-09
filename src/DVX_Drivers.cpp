@@ -92,7 +92,7 @@ RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
 }
 
 
-int main(void){
+int main(void) {
 #if defined(_WIN32)
     if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
     if (signal(SIGINT,  &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
@@ -173,16 +173,16 @@ int main(void){
 
                         imu.temperature = caerIMU6EventGetTemp(imuEvent);
                         //printing the event 
-                        std::cout
-                        << "ACCEL: "
-                        << imu.accel_x << ","
-                        << imu.accel_y << ","
-                        << imu.accel_z
-                        << " | GYRO: "
-                        << imu.gyro_x << ","
-                        << imu.gyro_y << ","
-                        << imu.gyro_z 
-                        << '\n' ;
+                        // std::cout
+                        // << "ACCEL: "
+                        // << imu.accel_x << ","
+                        // << imu.accel_y << ","
+                        // << imu.accel_z
+                        // << " | GYRO: "
+                        // << imu.gyro_x << ","
+                        // << imu.gyro_y << ","
+                        // << imu.gyro_z 
+                        // << '\n' ;
 
 
                     }
@@ -227,48 +227,48 @@ int main(void){
                         // }else{
                         //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
                         // }
-                        
+                    }    
                 }
-
-
-
-
-
             }
             
-            
+            std::cout << "Features detected: " << currFeatures.size() << '\n';
+            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+                std::cout << "Calling FeatureCollection\n";
 
+                int result = FeatureCollection(
+                    currFeatures[i], currEvents, epsilon, highestTimestamp
+                );
 
+                std::cout << "FeatureCollection returned: " << result << '\n';
+            }
                 
-            
+            caerEventPacketContainerFree(packetContainer);
+
+            cv::imshow("Features", canvas);
+            if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
             
     }
 
-    std::vector<int> temp;
-    for (int i = 0; i < (int)currFeatures.size(); i++){
-        if (FeatureCollection(currFeatures[i], currEvents, epsilon, highestTimestamp) != 0){
-            std::cout << "IRan";
-            temp[i] = 1;
-        }
+    // std::vector<int> temp;
+    // for (int i = 0; i < (int)currFeatures.size(); i++){
+    //     if (FeatureCollection(currFeatures[i], currEvents, epsilon, highestTimestamp) != 0){
+    //         std::cout << "IRan";
+    //         temp[i] = 1;
+    //     }
         
-    }
+    // }
 
-    for (int i = 0; i < (int)temp.size(); i++){
-        currFeatures.erase(currFeatures.begin() + i);
-    }
+    // for (int i = 0; i < (int)temp.size(); i++){
+    //     currFeatures.erase(currFeatures.begin() + i);
+    // }
     
-    caerEventPacketContainerFree(packetContainer);
+
 
     // fade the whole canvas toward black so old corners decay
     // canvas *= 0.90;
 
-    cv::imshow("Features", canvas);
-    if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
 
-    
-}
-
-caerDeviceDataStop(dvxplr_hndl);
+    caerDeviceDataStop(dvxplr_hndl);
     caerDeviceClose(&dvxplr_hndl);
     // cv::destroyAllWindows();
     printf("Shutdown successful.\n");
