@@ -4,7 +4,7 @@
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
     if (!F.checkWindow()){
         if (!F.findEventsInit(currEvents)){
-            return 0;
+            return INIT;
         }
     }else{
         F.findEvents(currEvents); //collects current events within spatiotmeporal window
@@ -21,7 +21,6 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         if (F.checkHealth() > 3){
             return DEAD;
         }
-
 
     }   
     if (F.updateTimeWindow(highestTimestamp)){
