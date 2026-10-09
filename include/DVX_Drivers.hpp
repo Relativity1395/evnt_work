@@ -22,7 +22,7 @@
 #define WIDTH 640
 #define HEIGHT 480
 #define MAXFEAT 100
-
+#define RAD 15
 // uint16_t **sae = (uint16_t**)malloc((WIDTH*HEIGHT)*sizeof(uint16_t*));
 
 

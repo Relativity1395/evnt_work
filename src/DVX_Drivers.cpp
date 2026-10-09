@@ -204,24 +204,24 @@ int main(void){
                         bool feature = detector.isFeature(currEvents.back());
                         //test push main
                         if (feature == true){
-                            for (int i = 0; i < (int)currFeatures.size(); i++){
-                                if (currEvents.back().position.norm() <= currFeatures[i].getPosition().norm() + 1 && currFeatures[i].checkLife){
-                                    Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
-                                    currFeatures[i] = Feature;
-                                    break;
-                                }
-                                else if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
-                                    if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
-                                        Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
-                                        currFeatures.push_back(Feature);
-                                        break;
-                                    }
-                                    continue;
+                            Eigen::Vector2d newPos = currEvents.back().pos();
+                bool nearExisting = false;
 
-                                }
-                                break;
-                            }
-                            
+                for (int i = 0; i < (int)currFeatures.size(); i++) {
+                    double dist = (newPos - currFeatures[i].getPosition()).norm();
+                    if (dist < xi) {
+                        nearExisting = true;
+                        if (currFeatures[i].checkLife()) {     
+                            currFeatures[i] = Feature(newPos, currEvents.back().t(),
+                                                    0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
+                        }
+                        break;                                    
+                }
+
+                if (!nearExisting && (int)currFeatures.size() < MAXFEAT) {
+                    currFeatures.push_back(Feature(newPos, currEvents.back().t(),
+                                                0.0, {}, {}, Eigen::Vector2d(0,0), 15.0));
+                }
                             
                             cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
                             // std::cout<< "feature position x: " << evnt.x << std::endl;
