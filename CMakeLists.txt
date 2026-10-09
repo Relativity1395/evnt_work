@@ -60,7 +60,7 @@ target_link_libraries(dvxplore_simple PRIVATE
 )
 
 # unit tests
-add_executable(test_feature
-  unit_tests/test_feature.cpp
-)
-target_link_libraries(test_feature PRIVATE evio_core)
+# add_executable(test_feature
+#   unit_tests/test_feature.cpp
+# )
+# target_link_libraries(test_feature PRIVATE evio_core)

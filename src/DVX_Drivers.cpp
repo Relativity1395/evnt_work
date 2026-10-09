@@ -246,7 +246,8 @@ int main(void){
 
     std::vector<int> temp;
     for (int i = 0; i < (int)currFeatures.size(); i++){
-        if (FeatureCollection(currFeatures[i]) == 1){
+        if (FeatureCollection(currFeatures[i], currEvents, epsilon, highestTimestamp) != 0){
+            std::cout << "IRan";
             temp[i] = 1;
         }
         
