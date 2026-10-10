@@ -20,11 +20,14 @@ class Feature{
         std::vector<Eigen::Vector2d> landmark;
         std::vector<Eigen::Vector2d> t_flow;
         std::vector<std::vector<Association>> weights;
-        bool badHealth;
-        bool converged;
-        int deadCycles;
+        bool badHealth = false;
+        bool converged = false;
+        int deadCycles = 0;
 
     public:
+        void updateBackPropagation();
+        double getDti() const;
+        void updatePosition(double deltaTime);
         Feature(Eigen::Vector2d position,
                 double Ti,
                 double dti,
@@ -33,6 +36,9 @@ class Feature{
                 Eigen::Vector2d flow,
                 double xi
             );
+        Eigen::Vector2d getFlow() const; 
+        bool isWindowComplete(double highestTimestamp) const;
+        void setConverged(bool status); 
         void propagatePreviousEvents();
         const std::vector<Eigen::Vector2d>& getLandmark() const;
         void setEvents();

@@ -17,41 +17,76 @@ Feature::Feature(
     this->dti = dti;
     this->xi = xi;
 }
-
+void Feature::updatePosition(double deltaTime) {
+    position += flow * deltaTime;
+}
 const std::vector<Eigen::Vector2d>& Feature::getLandmark() const{
     return landmark;
 }
-
+double Feature::getDti() const {
+    return dti;
+}
+Eigen::Vector2d Feature::getFlow() const{
+    return flow;
+}
+bool Feature::isWindowComplete(double highestTimestamp) const {
+    return dti > 0 && highestTimestamp >= Ti + dti;
+}
+void Feature::setConverged(bool status){
+    converged = status;
+}
 void Feature::setEvents(){
     this->previousEvents = this->currentEvents;
     currentEvents.clear();
     // this->currentEvents = newEvents;
 }
-
 void Feature::findEvents(const std::vector<Event>& E){
-    currentEvents.clear();
-    bProp.clear();
+
     for(const Event& event : E){
-        Eigen::Vector2d x = event.pos();
-        double tbar = event.t() - Ti;
-        Eigen::Vector2d u = flow;
-        Eigen::Vector2d fti = position;
-        Eigen::Vector2d backProp = x - tbar * u;
-        Eigen::Vector2d V = backProp - fti;
-        if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
-            if(V.norm() <= xi){
-                currentEvents.push_back(event);
-                bProp.push_back(backProp);
-            }
+
+        double t = event.t();
+
+        // Only collect events inside the current time window
+        if (t < Ti || t >= Ti + dti){
+            continue;
         }
+
+        Eigen::Vector2d x = event.pos();
+        double tbar = t - Ti;
+
+        Eigen::Vector2d backProp = x - tbar * flow;
+
+        if ((backProp - position).norm() <= xi){
+
+            currentEvents.push_back(event);
+            bProp.push_back(backProp);
         }
     }
+}
+// void Feature::findEvents(const std::vector<Event>& E){
+    
+//     for(const Event& event : E){
+//         Eigen::Vector2d x = event.pos();
+//         double tbar = event.t() - Ti;
+//         Eigen::Vector2d u = flow;
+//         Eigen::Vector2d fti = position;
+//         Eigen::Vector2d backProp = x - tbar * u;
+//         Eigen::Vector2d V = backProp - fti;
+//         if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
+//             if(V.norm() <= xi){
+//                 currentEvents.push_back(event);
+//                 bProp.push_back(backProp);
+//             }
+//         }
+//         }
+//     }
 
 
     bool Feature::findEventsInit(const std::vector<Event>& E){
-    currentEvents.clear();   // otherwise repeated calls pile up duplicates
-    bProp.clear();
     for (const Event& event : E){
+        if (event.t() < Ti){
+        continue;
+        }
         Eigen::Vector2d x = event.pos();
         double tbar = event.t() - Ti;
         Eigen::Vector2d backProp = x - tbar * flow;
@@ -83,21 +118,65 @@ void Feature::findEvents(const std::vector<Event>& E){
 //     return checkInitWindow();  
 // }
 bool Feature::updateTimeWindow(double highestTimestamp){
+
+    // Initial time window
     if (dti == 0){
+
+        if (currentEvents.empty()){
+            return false;
+        }
+
         dti = currentEvents.back().t() - Ti;
+
+        if (dti <= 0){
+            return false;
+        }
+
+        if (dti > MAXDELT){
+            dti = MAXDELT;
+        }
+        Ti += dti;
         return true;
-    }else{
-        if (highestTimestamp >= Ti + dti){
-            Ti = Ti + dti;
-            dti = 3.0/getMedianMagnitude();
-            if (dti >= MAXDELT){
-                dti = MAXDELT;
-            }
-            return true;
-        } 
     }
+
+    // Check whether the current window is complete
+    if (highestTimestamp >= Ti + dti){
+
+        double median = getMedianMagnitude();
+
+        double newDti;
+
+        if (median > 1e-12){
+            newDti = 3.0 / median;
+        }else{
+            newDti = MAXDELT;
+        }
+
+        Ti = Ti + dti;
+
+        dti = std::min(newDti, static_cast<double>(MAXDELT));
+
+        return true;
+    }
+
     return false;
-}   
+}
+// bool Feature::updateTimeWindow(double highestTimestamp){
+//     if (dti == 0){
+//         dti = currentEvents.back().t() - Ti;
+//         return true;
+//     }else{
+//         if (highestTimestamp >= Ti + dti){
+//             Ti = Ti + dti;
+//             dti = 3.0/getMedianMagnitude();
+//             if (dti >= MAXDELT){
+//                 dti = MAXDELT;
+//             }
+//             return true;
+//         } 
+//     }
+//     return false;
+// }   
 void Feature::propagatePreviousEvents(){
     landmark.clear();
     for(const Event& event : previousEvents){
@@ -107,7 +186,18 @@ void Feature::propagatePreviousEvents(){
         landmark.push_back(propagatedEvent);
     }
 }
+void Feature::updateBackPropagation(){
+    bProp.clear();
 
+    for (const Event& event : currentEvents){
+        double tbar = event.t() - Ti;
+
+        Eigen::Vector2d backProp =
+            event.pos() - tbar * flow;
+
+        bProp.push_back(backProp);
+    }
+}
 void Feature::generateKD(){
 
     const double r2 = 4.2426;
@@ -220,10 +310,13 @@ double Feature::getMedianMagnitude() {
 }
 
 int Feature::checkHealth(){
-    badHealth = (!converged) && (currentEvents.size() < 5);
+    badHealth = (!converged) || (currentEvents.size() < 5);
     if (badHealth){
         deadCycles++;
         
+    }
+    else{
+        deadCycles = 0;
     }
     return deadCycles;
 }
@@ -267,7 +360,12 @@ Eigen::Vector2d Feature::updateFlow(){
                 denominator += rkj * std::pow(tbar, 2);
             }
         }
+        
+        if (denominator <= 1e-12) {
+            return flow;
+        }       
         Eigen::Vector2d u = numerator/denominator;
+        flow = u;
         return u;
 }
 

@@ -132,7 +132,10 @@ int main(void) {
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
+
     while (!globalShutdown.load(std::memory_order_relaxed)) {
+            int batchEvents = 0;
+            int batchCorners = 0;
             canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
@@ -201,10 +204,21 @@ int main(void) {
                         
                         
                         currEvents.push_back(get_event(polarity, j));
+                        const Event& ev = currEvents.back();
+
+                        cv::circle(
+                            canvas,
+                            cv::Point(ev.position.x(), ev.position.y()),
+                            1,
+                            cv::Scalar(0, 0, 0),
+                            -1
+                        );
                         if (currEvents.back().timestamp > highestTimestamp){
                             highestTimestamp = currEvents.back().timestamp;
                         }
                         bool feature = detector.isFeature(currEvents.back());
+                        batchEvents++;
+                        if (feature) batchCorners++;
                         // right after: bool feature = detector.isFeature(currEvents.back());
                         evCount++;
                         if (feature) detCount++;
@@ -227,18 +241,18 @@ int main(void) {
                                 currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
                                                         std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
                             }
-                            for (int i = 0; i < (int)currFeatures.size(); i++){
-                                if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
-                                    if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
-                                        Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
-                                        currFeatures.push_back(Feature);
-                                        break;
-                                    }
-                                    continue;
+                            // for (int i = 0; i < (int)currFeatures.size(); i++){
+                            //     if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
+                            //         if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
+                            //             Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
+                            //             currFeatures.push_back(Feature);
+                            //             break;
+                            //         }
+                            //         continue;
 
-                                }
-                                break;
-                            }
+                            //     }
+                            //     break;
+                            // }
                             
                             
                             cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
@@ -255,26 +269,62 @@ int main(void) {
             }
             
             std::cout << "Features detected: " << currFeatures.size() << '\n';
-            
+            std::cout << "Batch events: " << batchEvents
+                << " | eFAST corners: " << batchCorners
+                << " | Active features: " << currFeatures.size()
+                << std::endl;
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 std::cout << "Calling FeatureCollection\n";
-
+                
                 int result = FeatureCollection(
                     currFeatures[i], currEvents, epsilon, highestTimestamp
                 );
 
                 std::cout << "FeatureCollection returned: " << result << '\n';
+                if (result == DEAD) {
+                    currFeatures.erase(currFeatures.begin() + i);
+                    i--;
+                    continue;
+                }
+                std::cout << "Flow: "
+                << currFeatures[i].getFlow().transpose()
+                << '\n';
                 // next to your "Features detected" print
-                std::cout << "events: " << evCount << "  detector true: " << detCount
-                << "  MAXFEAT: " << MAXFEAT << '\n';
-            }
                 
-            caerEventPacketContainerFree(packetContainer);
+            }
+            std::cout << "events: " << evCount << "  detector true: " << detCount
+            << "  MAXFEAT: " << MAXFEAT << '\n';    
+            // caerEventPacketContainerFree(packetContainer);
 
+            // cv::imshow("Features", canvas);
+            // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
+            caerEventPacketContainerFree(packetContainer);
+            currEvents.clear();
+
+// Draw all stored features as green circles
+            for (Feature& f : currFeatures) {
+
+                Eigen::Vector2d pos = f.getPosition();
+
+                cv::circle(
+                    canvas,
+                    cv::Point(
+                        static_cast<int>(pos.x()),
+                        static_cast<int>(pos.y())
+                    ),
+                    3,
+                    cv::Scalar(0, 255, 0),
+                    1
+                );
+            }
+
+            // Display camera output
             cv::imshow("Features", canvas);
-            if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
-            
-    }
+
+            if (cv::waitKey(1) == 27)
+                globalShutdown.store(true);
+                        
+                }
 
     // std::vector<int> temp;
     // for (int i = 0; i < (int)currFeatures.size(); i++){
