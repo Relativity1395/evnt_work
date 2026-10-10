@@ -109,8 +109,7 @@ void Feature::propagatePreviousEvents(){
 }
 
 void Feature::generateKD(){
-    weights.clear();
-    weights.resize(currentEvents.size());
+
     const double r2 = 4.2426;
     const int dim = 2;
     const int leaf = 10;
