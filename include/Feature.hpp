@@ -23,6 +23,7 @@ class Feature{
         bool badHealth = false;
         bool converged = false;
         int deadCycles = 0;
+        size_t id;
 
     public:
         void updateBackPropagation();
@@ -46,14 +47,17 @@ class Feature{
         bool findEventsInit(const std::vector<Event>& E);
         bool updateTimeWindow(double highestTimestamp);
         void generateKD();
-        Eigen::Vector2d getPosition();
+        Eigen::Vector2d getPosition() const;
         void updateFeature();
         double getMedianMagnitude();
         int checkHealth();
-        int getDeadCycles();
+        int getDeadCycles() const;
         double calculateCost();
         Eigen::Vector2d updateFlow();
         bool checkWindow();
         bool checkInitWindow();
-     
-    };
+        size_t getEventCount() const;
+        bool hasConverged() const;
+        void setID(size_t newID) { id = newID; }
+        size_t getID() const { return id; }
+};
