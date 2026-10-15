@@ -1,11 +1,13 @@
 # Algorithm 3 State Estimation
-## Goal: Estimate the full 6-DoF pose and kinematic state of the IMU and Event Based Camera over time by fusing high-rate event feature tracks with inertial measurements using an Extended Kalman Filter (EKF)
+## Goal: Estimate the full 6 Degrees of Freedom pose and kinematic state of the IMU and Event Based Camera over time by combining high-rate event feature tracks with inertial measurements using an Extended Kalman Filter (EKF)
+<img width="741" height="516" alt="image" src="https://github.com/user-attachments/assets/533751fe-8434-47e1-b49f-c9a3e75baef8" />
+
 ## Inputs:
 - Sensor state : $s_i$
 - Features : {f}
 - IMU values : <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/2964bbdd-09d1-48fe-80ac-4aed49623642" />  for t ∈ [ $T_i$, $T_i$ + $dt_i$]
 __________________________________________________________________________________________________________________________
-### Step 1: IMU State and Covariance Propagation
+### Step 1: Propagate the Sensor State Mean and Covariance
 #### Goal: Integrate IMU measurements across temporal window $[T_i, T_{i+1}]$
 #### Analytical Process:
 1. If multiple IMU packets exist in the window, iterate sequentially using 5th-order Runge-Kutta numerical integration
@@ -16,7 +18,7 @@ ________________________________________________________________________________
    <img width="492" height="86" alt="image" src="https://github.com/user-attachments/assets/62767305-7f49-43e4-bdb2-52eef98a8a7f" />
 
 __________________________________________________________________________________________________________________________
-### Step 2: Camera State Augmentation
+### Step 2: Augment a new camera state
 #### Goal: Clone the current sensor pose into the state history
 #### Analytical Process:
 1. Augment the state with a new camera pose at the current time
@@ -26,7 +28,7 @@ ________________________________________________________________________________
 2. Update the covariance using the Jacobian that maps the IMU state to the camera state
 
 __________________________________________________________________________________________________________________________
-### Step 3 (INSIDE LOOP): Outlier Rejection via RANSAC
+### Step 3 (INSIDE LOOP): Per Feature Loop - Outlier Rejection via RANSAC
 #### Goal: Find the largest set of inliers that project to the same point in space, based on reprojection error to remove moving objects and other erroneous measurements from the track
 #### Analytical Process:
 1. For a feature track pending marginalization with $M$ observations across camera poses, evaluate subsets of 2D measurements against their multi-view epipolar / reprojection constraints
