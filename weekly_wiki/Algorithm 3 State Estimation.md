@@ -31,7 +31,7 @@ ________________________________________________________________________________
 #### Analytical Process:
 1. Extract the current camera orientation $\bar{q}(T_{i+1})$ and position $p(T_{i+1})$ from the propagated sensor state $s(T_{i+1})$ and append them to the full state vector $S$
 
-<img width="655" height="36" alt="image" src="https://github.com/user-attachments/assets/103dde33-78de-4bce-a6ca-edb997c76bbe" />
+- <img width="655" height="36" alt="image" src="https://github.com/user-attachments/assets/103dde33-78de-4bce-a6ca-edb997c76bbe" />
 
 2. Compute the state-to-camera Jacobian
 3. Update and expand the dimensions of the state covariance matrix using the Jacobian
@@ -50,7 +50,7 @@ ________________________________________________________________________________
 #### Analytical Process:
 1. Run a Reprojection RANSAC loop over the 2D observations in track $f_j$
 2. Estimate a 3D point from minimal subsets of observations, project the 3D point back into all observing camera frames using the perspective projection model equation
-<img width="350" height="42" alt="image" src="https://github.com/user-attachments/assets/fdc3125e-b23f-44be-b7e2-369c6eda067d" />
+- <img width="350" height="42" alt="image" src="https://github.com/user-attachments/assets/fdc3125e-b23f-44be-b7e2-369c6eda067d" />
 
 3. Find the biggest group of measurements that all agree on the exact same 3D location, and ignore the rest as mistakes.
 
@@ -64,7 +64,7 @@ ________________________________________________________________________________
 #### Analytical Process:
 1. Treat the historical camera poses in $S$ as fixed/known
 2. Formulate the nonlinear least-squares reprojection cost using the perspective projection model equations 
-<img width="447" height="127" alt="image" src="https://github.com/user-attachments/assets/c3c34511-e0b7-4275-8b57-994fb6ad895c" />
+- <img width="447" height="127" alt="image" src="https://github.com/user-attachments/assets/c3c34511-e0b7-4275-8b57-994fb6ad895c" />
 3. Solve for the 3D landmark position $\hat{F}_j$ via Gauss-Newton optimization to minimize the difference between observed 2D coordinates and projected 3D estimates
 
 #### Output: Estimated 3D landmark position $\hat{F}_j$
@@ -78,11 +78,11 @@ ________________________________________________________________________________
 - Observing camera poses from state vector $S$
 #### Analytical Process:
 1. Compute the predicted 2D projection in each observing camera pose using
-<img width="591" height="47" alt="image" src="https://github.com/user-attachments/assets/52d11348-5dc5-40aa-83de-107c4f5ae8b6" />
+- <img width="591" height="47" alt="image" src="https://github.com/user-attachments/assets/52d11348-5dc5-40aa-83de-107c4f5ae8b6" />
 2. Calculate the stacked per-pose residual vector $r^{(j)}$ for feature $j$ as the difference between the actual 2D observations and the predicted projections
 3. Linearize the measurement model around the current state estimate $S$ and feature estimate $\hat{F}_j$ to compute the state Jacobian $H_S^{(j)}$ and the feature Jacobian $H_F^{(j)}$
 4. Project the residual $r^{(j)}$ and state Jacobian $H_S^{(j)}$ onto $A^T$ (Equation 13) to eliminate the feature error $\tilde{F}_j$ using equation
-<img width="732" height="143" alt="image" src="https://github.com/user-attachments/assets/53dc6a86-fec9-44b2-b20f-09816e2c8116" />
+- <img width="732" height="143" alt="image" src="https://github.com/user-attachments/assets/53dc6a86-fec9-44b2-b20f-09816e2c8116" />
 
 
 #### Output: The uncorrelated residual vector $r_0^{(j)}$, the projected state measurement Jacobian $H_0^{(j)} = A^T H_S^{(j)}$, and the projected noise covariance for feature $f_j$
@@ -105,12 +105,12 @@ ________________________________________________________________________________
 #### Inputs: Stacked residual vector $r_0$ and stacked measurement Jacobian $H_0$
 #### Analytical Process:
 1. Perform QR decomposition on the stacked Jacobian matrix $H_0$ using equation below where $Q_1$ and $Q_2$ have orthonormal columns and $T_H$ is an upper triangular matrix
-<img width="307" height="80" alt="image" src="https://github.com/user-attachments/assets/53d87865-ab1b-4fa7-881c-5691a4b4dc6b" />
+- <img width="307" height="80" alt="image" src="https://github.com/user-attachments/assets/53d87865-ab1b-4fa7-881c-5691a4b4dc6b" />
 
 2. Project the stacked residual $r_0$ onto $Q_1^T$ and discard the zero-Jacobian subspace corresponding to $Q_2$ using equation
-   <img width="186" height="60" alt="image" src="https://github.com/user-attachments/assets/9ad2374f-264e-4853-9164-771732a69867" />
+- <img width="186" height="60" alt="image" src="https://github.com/user-attachments/assets/9ad2374f-264e-4853-9164-771732a69867" />
 
-3. Similarly, transform the measurement noise covariance matrix using $Q_1^T$
+3. Transform the measurement noise covariance matrix using $Q_1^T$
 #### Output: Dimension-reduced final residual vector $r_n$, upper-triangular measurement Jacobian $T_H$, and reduced measurement noise covariance
 
 __________________________________________________________________________________________________________________________
@@ -122,9 +122,9 @@ ________________________________________________________________________________
 #### Analytical Process:
 1. Compute the standard EKF Kalman gain $K$ using the state covariance matrix, the compressed Jacobian $T_H$, and the compressed measurement noise covariance
 2. Compute the state correction vector using equation
-<img width="487" height="42" alt="image" src="https://github.com/user-attachments/assets/5655799a-4d95-47e6-854e-d5a00852de2f" />
-4. Apply $\Delta S$ to update the state vector $S$ (using quaternion multiplication for the orientation states $\bar{q}$ and vector addition for $b_g, v, b_a, p$)
-5. Update the state covariance matrix using the standard EKF covariance update equation, and prune any historical camera poses from $S$ and the covariance matrix that no longer observe any active features
+- <img width="487" height="42" alt="image" src="https://github.com/user-attachments/assets/5655799a-4d95-47e6-854e-d5a00852de2f" />
+3. Apply $\Delta S$ to update the state vector $S$ (using quaternion multiplication for the orientation states $\bar{q}$ and vector addition for $b_g, v, b_a, p$)
+4. Update the state covariance matrix using the standard EKF covariance update equation, and prune any historical camera poses from $S$ and the covariance matrix that no longer observe any active features
 #### Output: Updated full filter state $S$ (yielding the updated sensor state $s_{i+1}$) and updated state covariance matrix for the next iteration of Algorithm 1
 
 
