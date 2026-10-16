@@ -206,13 +206,13 @@ int main(void) {
                         currEvents.push_back(get_event(polarity, j));
                         const Event& ev = currEvents.back();
 
-                        cv::circle(
-                            canvas,
-                            cv::Point(ev.position.x(), ev.position.y()),
-                            1,
-                            cv::Scalar(0, 0, 0),
-                            -1
-                        );
+                        // cv::circle(
+                        //     canvas,
+                        //     cv::Point(ev.position.x(), ev.position.y()),
+                        //     1,
+                        //     cv::Scalar(0, 0, 0),
+                        //     -1
+                        // );
                         if (currEvents.back().timestamp > highestTimestamp){
                             highestTimestamp = currEvents.back().timestamp;
                         }
@@ -274,21 +274,21 @@ int main(void) {
                 << " | Active features: " << currFeatures.size()
                 << std::endl;
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                std::cout << "Calling FeatureCollection\n";
+                //std::cout << "Calling FeatureCollection\n";
                 
                 int result = FeatureCollection(
                     currFeatures[i], currEvents, epsilon, highestTimestamp
                 );
 
-                std::cout << "FeatureCollection returned: " << result << '\n';
+                //std::cout << "FeatureCollection returned: " << result << '\n';
                 if (result == DEAD) {
                     currFeatures.erase(currFeatures.begin() + i);
                     i--;
                     continue;
                 }
-                std::cout << "Flow: "
-                << currFeatures[i].getFlow().transpose()
-                << '\n';
+                //std::cout << "Flow: "
+                //<< currFeatures[i].getFlow().transpose()
+                //<< '\n';
                 // next to your "Features detected" print
                 
             }
@@ -297,7 +297,7 @@ int main(void) {
             // caerEventPacketContainerFree(packetContainer);
 
             // cv::imshow("Features", canvas);
-            // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
+            if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
             caerEventPacketContainerFree(packetContainer);
             currEvents.clear();
 
