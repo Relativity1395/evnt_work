@@ -3,6 +3,9 @@
 #include "../include/Feature.hpp"
 #include "../include/OpticalFlow.hpp"
 
+#include <fstream>
+#include <iomanip>
+
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
     if (signal == SIGTERM || signal == SIGINT) globalShutdown.store(true);
@@ -92,6 +95,32 @@ RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
 }
 
 
+void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double timestamp, size_t activeFeatures, int status) {
+    const char* statusStr;
+
+    if (status == DEAD)
+        statusStr = "DEAD";
+    else if (status == INIT)
+        statusStr = "INIT";
+    else
+        statusStr = "ALIVE";
+
+    logFile << "FEATURE STATUS: \n";
+
+    logFile << "Feature ID: " << feature.getID() << "\n";
+    logFile << "Timestamp (us): " << std::fixed << std::setprecision(0) << timestamp << "\n";
+    logFile << "Status: " << statusStr << "\n";
+    logFile << "Position: " << feature.getPosition().transpose() << "\n";
+    logFile << "Flow (px/us): " << std::setprecision(8) << feature.getFlow().transpose() << "\n";
+    logFile << "Active Features: " << activeFeatures << "\n";
+    logFile << "Dead Cycles: " << feature.getDeadCycles() << "\n";
+    logFile << "Events in Window: " << feature.getEventCount() << "\n";
+    logFile << "Converged: " << std::boolalpha << feature.hasConverged() << "\n";
+
+    logFile << "\n\n";
+}
+
+
 int main(void) {
 #if defined(_WIN32)
     if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
@@ -132,6 +161,16 @@ int main(void) {
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
+
+    size_t nextFeatureID = 0;
+    double lastLogTime = 0;
+    const double LOG_INTERVAL = 100000.0;
+    std::ofstream logFile("feature_status.txt", std::ios::app);
+
+    if (!logFile.is_open()) {
+        std::cerr << "Failed to open feature log file!\n";
+        return 1;
+    }
 
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
@@ -224,10 +263,6 @@ int main(void) {
                         if (feature) detCount++;
                         //test push main
                         if (feature == true){
-                            
-
-                        
-
                         
                             const Event &ev = currEvents.back();
                             bool isNew = true;
@@ -240,6 +275,7 @@ int main(void) {
                             if (isNew && currFeatures.size() < MAXFEAT) {
                                 currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
                                                         std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
+                                currFeatures.back().setID(nextFeatureID++);
                             }
                             // for (int i = 0; i < (int)currFeatures.size(); i++){
                             //     if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
@@ -273,6 +309,9 @@ int main(void) {
                 << " | eFAST corners: " << batchCorners
                 << " | Active features: " << currFeatures.size()
                 << std::endl;
+
+            bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
+
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 //std::cout << "Calling FeatureCollection\n";
                 
@@ -281,6 +320,11 @@ int main(void) {
                 );
 
                 //std::cout << "FeatureCollection returned: " << result << '\n';
+
+                if (shouldLog || result == DEAD) {
+                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), result);
+                }
+
                 if (result == DEAD) {
                     currFeatures.erase(currFeatures.begin() + i);
                     i--;
@@ -292,6 +336,11 @@ int main(void) {
                 // next to your "Features detected" print
                 
             }
+
+            if (shouldLog) {
+                lastLogTime = highestTimestamp;
+            }
+            
             std::cout << "events: " << evCount << "  detector true: " << detCount
             << "  MAXFEAT: " << MAXFEAT << '\n';    
             // caerEventPacketContainerFree(packetContainer);

@@ -35,6 +35,12 @@ bool Feature::isWindowComplete(double highestTimestamp) const {
 void Feature::setConverged(bool status){
     converged = status;
 }
+size_t Feature::getEventCount() const {
+    return currentEvents.size();
+}
+bool Feature::hasConverged() const {
+    return converged;
+}
 void Feature::setEvents(){
     this->previousEvents = this->currentEvents;
     currentEvents.clear();
@@ -274,7 +280,7 @@ void Feature::generateKD(){
 
 // }
 
-Eigen::Vector2d Feature::getPosition(){
+Eigen::Vector2d Feature::getPosition() const {
     Eigen::Vector2d pos = position;
     return pos;
 }
@@ -321,7 +327,7 @@ int Feature::checkHealth(){
     return deadCycles;
 }
 
-int Feature::getDeadCycles(){
+int Feature::getDeadCycles() const {
     int dCycle = deadCycles;
     return dCycle;
 }
