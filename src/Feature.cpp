@@ -1,4 +1,6 @@
 #include <../include/Feature.hpp>
+#include <algorithm>
+#include <cmath>
 
 Feature::Feature(
     Eigen::Vector2d position,
@@ -10,8 +12,8 @@ Feature::Feature(
     double xi
 ){
     this->position = position;
-    this->currentEvents = currentEvents;
-    this->previousEvents= previousEvents;
+    this->currentEvents = std::move(currentEvents);
+    this->previousEvents= std::move(previousEvents);
     this->flow = flow;
     this->Ti = Ti;
     this->dti = dti;
@@ -23,53 +25,54 @@ const std::vector<Eigen::Vector2d>& Feature::getLandmark() const{
 }
 
 void Feature::setEvents(){
-    this->previousEvents = this->currentEvents;
+    //swap keeps both buffer capacity, so the next window doesnt reallocate
+    std::swap(previousEvents, currentEvents);
     currentEvents.clear();
-    // this->currentEvents = newEvents;
 }
-
+//E must be sorted by timestamp, so we get right into Ti
 void Feature::findEvents(const std::vector<Event>& E){
     currentEvents.clear();
-    bProp.clear();
-    for(const Event& event : E){
-        Eigen::Vector2d x = event.pos();
-        double tbar = event.t() - Ti;
-        Eigen::Vector2d u = flow;
-        Eigen::Vector2d fti = position;
-        Eigen::Vector2d backProp = x - tbar * u;
-        Eigen::Vector2d V = backProp - fti;
-        if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
-            if(V.norm() <= xi){
-                currentEvents.push_back(event);
-                bProp.push_back(backProp);
-            }
-        }
+   
+    const double tEnd = Ti + dti;
+    const double xi2 = xi * xi;
+    
+    auto it = std::lower_bound(E.begin(), E.end(), Ti,
+    [](const Event& event, double t) {
+        return event.t() < t;});
+    
+    for (; it != E.end() && it->t() <= tEnd; ++it) {
+        const Eigen::Vector2d backProp = it->pos() - (it->t() - Ti) * flow;
+        if ((backProp - position).squaredNorm() < xi2) {
+            currentEvents.push_back(*it);
         }
     }
+}
 
 bool Feature::findEventsInit(const std::vector<Event>& E){
-    for(const Event& event : E){
-        Eigen::Vector2d x = event.pos();
-        double tbar = event.t() - Ti;
-        Eigen::Vector2d u = flow;
-        Eigen::Vector2d fti = position;
-        Eigen::Vector2d backProp = x - tbar * u;
-        Eigen::Vector2d V = backProp - fti;
+    const double xi2 = xi * xi;
 
-        if (E.size() <= 300 && V.norm() < xi){
+    for (const Event& event : E) {
+        if (currentEvents.size() >= MINEVNT) break; // Stop if we have enough events
+        if (event.t() < Ti) continue; // Skip events before Ti
+        const Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
+        if ((backProp - position).squaredNorm() < xi2) {
             currentEvents.push_back(event);
-            bProp.push_back(backProp);
         }
-    } 
-    return checkInitWindow();  
+    }
+    return checkInitWindow();
 }
+
+
 bool Feature::updateTimeWindow(double highestTimestamp){
     if (dti == 0){
-        dti = currentEvents.back().t() - Ti;
+        //init fiest window length = span of the init event, it starts where init ended
+        dti = std::max(currentEvents.back().t() - Ti, 1.0);
+        Ti += dti;
         return true;
     }else{
         if (highestTimestamp >= Ti + dti){
-            Ti = Ti + dti;
+            position += dti * flow;
+            Ti += dti;
             dti = 3.0/getMedianMagnitude();
             if (dti >= MAXDELT){
                 dti = MAXDELT;
@@ -79,65 +82,61 @@ bool Feature::updateTimeWindow(double highestTimestamp){
     }
     return false;
 }   
+
 void Feature::propagatePreviousEvents(){
     landmark.clear();
-    for(const Event& event : previousEvents){
-        Eigen::Vector2d x = event.pos();
-        double t = event.t();
-        Eigen::Vector2d propagatedEvent = x + (Ti - t)*flow;
-        landmark.push_back(propagatedEvent);
+    landmark.reserve(previousEvents.size());
+    for (const Event& event : previousEvents) {
+        landmark.push_back(event.pos() + (Ti - event.t()) * flow);
     }
 }
 
-
-void Feature::generateKD(){
+// E step : back prop current events with the current flow and weight them against the landmakrrs
+void Feature::generateKD(const LandmarkTree& tree){
 
     const double r2 = 4.2426;
-    const int dim = 2;
-    const int leaf = 10;
-    
-    typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
-    my_kd_tree_t mat_index(dim, landmark, leaf);
-    using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
-    Matches ret_matches;
-    std::vector<Matches> totMatches;
-    for (size_t i = 0; i < bProp.size(); i++){
-        const size_t nMatches = mat_index.index->radiusSearch(bProp[i].data(), r2, ret_matches);
-        if (nMatches > 0){
-            totMatches.push_back(ret_matches);
-        }
+    nanoflann::SearchParameters params;
+    params.sorted = false; // We don't need sorted results for our use case
+    weights.resize(currentEvents.size());
 
-
-    }
-
-    for (std::size_t k = 0; k < totMatches.size(); ++k) {
+    for (std::size_t k = 0; k < currentEvents.size(); ++k) {
         auto& eventWeights = weights[k];
-        eventWeights.reserve(totMatches[k].size());
+        eventWeights.clear();
+
+        const Eigen::Vector2d backProp = currentEvents[k].pos() - (currentEvents[k].t() - Ti) * flow;
+        if (tree.index->radiusSearch(backProp.data(), r2, matches, params) == 0)  continue;
 
         double sum = 0.0;
-
-        // Calculate gaussian scores and their sum
-        for (const auto& match : totMatches[k]) {
+        //calculare gaussian scores and their sum
+        for (const auto& match : matches) {
             const double score = std::exp(-match.second / 4.0);
-
             eventWeights.push_back({match.first, score});
             sum += score;
         }
-
-        // Divide each score by the sum to obtain rkj
+        // divide each score by the sum to get rkj
         for (auto& association : eventWeights) {
             association.weight /= sum;
         }
     }
 
-
-
 }
 
-Eigen::Vector2d Feature::getPosition(){
-    Eigen::Vector2d pos = position;
-    return pos;
+const Eigen::Vector2d& Feature::getPosition() const{
+    return position;
 }
+
+const Eigen::Vector2d& Feature::getFlow() const{
+    return flow;
+}
+
+double Feature::getTi() const{
+    return Ti;
+}
+
+std::size_t Feature::eventCount() const{
+    return currentEvents.size();
+}
+
 
 void updateFeature(){
 
@@ -169,6 +168,8 @@ double Feature::getMedianMagnitude() {
     }
 }
 
+
+
 int Feature::checkHealth(double cost, double epsilon){
     converged = cost < epsilon;
     badHealth = (!converged) || (currentEvents.size() < MINEVNT);
@@ -188,12 +189,8 @@ double Feature::calculateCost(){
         Eigen::Vector2d xk = currentEvents[k].pos();
         double tbar = currentEvents[k].t() - Ti;
         for(const Association& association : weights[k]){
-            double rkj = association.weight;
-            std::size_t j = association.landmarkIndex;
-            Eigen::Vector2d currLandmark = landmark[j];
-            Eigen::Vector2d mag = (xk - tbar * flow) - currLandmark;
-            cost += rkj * mag.squaredNorm();
-            
+            Eigen::Vector2d mag = (xk - tbar *flow) - landmark[association.landmarkIndex];
+            cost += association.weight * mag.squaredNorm();
         }
     }
             
@@ -209,18 +206,22 @@ Eigen::Vector2d Feature::updateFlow(){
             double tbar = currentEvents[k].t() - Ti;
             for(const Association& association : weights[k]){
                 double rkj = association.weight;
-                std::size_t j = association.landmarkIndex;
-                Eigen::Vector2d currLandmark = landmark[j];
-                numerator += rkj*(xk - currLandmark) * tbar;
-                denominator += rkj * std::pow(tbar, 2);
+                numerator += rkj*(xk - landmark[association.landmarkIndex]) * tbar;
+                denominator += rkj * tbar * tbar;
             }
         }
-        Eigen::Vector2d u = numerator/denominator;
-        return u;
+        if (denominator > 0.0) {
+            flow = numerator / denominator; //no matches: keep the previous flow
+        }
+    return flow;
 }
 
-bool Feature::checkWindow(){
+bool Feature::checkWindow() const{
     return (dti > 0);
+}
+
+bool Feature::windowClosed(double highestTimestamp) const{
+    return (highestTimestamp >= Ti + dti);
 }
 
 bool Feature::checkInitWindow(){
@@ -230,6 +231,6 @@ bool Feature::checkInitWindow(){
 void Feature::killFeature(){
     dead = true;
 }
-bool Feature::getLife(){
+bool Feature::getLife() const{
     return dead;
 }

@@ -1,7 +1,7 @@
 #include "Feature.hpp"
 #include "../include/Types.hpp"
 #include <stdlib.h>
-#define MAXITR 50000
+#define MAXITR 100 // EM normaly converges in < 20 
 #define MAXHEALTH 3
 enum FeatureState {
     INIT = 0,
@@ -9,4 +9,5 @@ enum FeatureState {
     HEALTHY = 2
 };
 void checkInitFeature(Event& e);
-int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp);
+int FeatureCollection(Feature& F, const std::vector<Event>& newEvents, const std::vector<Event>& eventBuffer, 
+    double epslion, double highestTimestamp);

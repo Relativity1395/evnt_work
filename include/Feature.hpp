@@ -7,6 +7,8 @@
 #define MINEVNT 300
 // Per-feature state / related events tracking
 
+//k-d tree over a features landmark; built once per window, queried every EM iteration
+using LandmarkTree = KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2>;
 
 class Feature{
     private:
@@ -17,14 +19,16 @@ class Feature{
         std::vector<Event> previousEvents;
         std::vector<Event> currentEvents;
         Eigen::Vector2d flow;
-        std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
+        //removed bprop, it stored backpropagated events, computed once in findEvents with the old flow.
         std::vector<Eigen::Vector2d> t_flow;
         std::vector<std::vector<Association>> weights;
-        bool badHealth;
-        bool converged;
-        int deadCycles;
-        bool dead;
+        std::vector<nanoflann::ResultItem<size_t, double>> matches; //reused radius search buffer
+
+        bool badHealth = false;
+        bool converged = false;
+        int deadCycles = 0;
+        bool dead = false;
 
     public:
         Feature(Eigen::Vector2d position,
@@ -41,17 +45,21 @@ class Feature{
         void findEvents(const std::vector<Event>& E);
         bool findEventsInit(const std::vector<Event>& E);
         bool updateTimeWindow(double highestTimestamp);
-        void generateKD();
-        Eigen::Vector2d getPosition();
+        void generateKD(const LandmarkTree& tree);
+        const Eigen::Vector2d& getPosition() const;
+        const Eigen::Vector2d& getFlow() const;
+        double getTi() const;
+        std::size_t eventCount() const;
         void updateFeature();
         double getMedianMagnitude();
         int checkHealth(double cost, double epsilon);
         int getDeadCycles();
         double calculateCost();
         Eigen::Vector2d updateFlow();
-        bool checkWindow();
+        bool checkWindow() const;
+        bool windowClosed(double highestTimestamp) const;
         bool checkInitWindow();
         void killFeature();
-        bool getLife();
+        bool getLife() const;
      
     };

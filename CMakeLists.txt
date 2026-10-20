@@ -15,6 +15,7 @@ find_library(LIBCAER_LIB NAMES caer
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/lib)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
+find_package(OpenMP REQUIRED)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
 # evio_core algorithm itself
@@ -57,6 +58,7 @@ target_link_libraries(dvxplore_simple PRIVATE
   pthread
   rt
   ${OpenCV_LIBS}
+  OpenMP::OpenMP_CXX
 )
 
 # unit tests
@@ -64,3 +66,9 @@ add_executable(test_feature
   unit_tests/test_feature.cpp
 )
 target_link_libraries(test_feature PRIVATE evio_core)
+
+add_executable(bench_tracking
+  unit_tests/bench_tracking.cpp
+)
+
+target_link_libraries(bench_tracking PRIVATE evio_core OpenMP::OpenMP_CXX)

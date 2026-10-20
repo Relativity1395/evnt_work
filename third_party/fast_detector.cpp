@@ -1,4 +1,4 @@
-#include "fast_detector.h"
+#include "../third_party/fast_detector.h"
 
 namespace corner_event_detector
 {
@@ -18,8 +18,8 @@ FastDetector::FastDetector(bool connect)
   detector_name_ = "FAST";
 
   // allocate SAE matrices
-  sae_[0] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
-  sae_[1] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
+  sae_[0] = SAE::Zero(sensor_width_,sensor_height_);
+  sae_[1] = SAE::Zero(sensor_width_,sensor_height_);
 }
 
 FastDetector::~FastDetector()
@@ -30,7 +30,7 @@ bool FastDetector::isFeature(const Event& e)
 {
   // update SAE
   const int ex = static_cast<int>(e.position.x());
-  const int ey = static_cast<int>(e.position.y());\
+  const int ey = static_cast<int>(e.position.y());
 
   const int pol = e.polarity ? 1 : 0;
   sae_[pol](ex, ey) = e.timestamp; //same order as every read below

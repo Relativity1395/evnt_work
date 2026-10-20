@@ -27,7 +27,9 @@ public:
 
 private:
   // SAE
-  Eigen::MatrixXd sae_[2];
+  using SAE = Eigen::Matrix<uint32_t, Eigen::Dynamic, Eigen::Dynamic>;
+
+  SAE sae_[2];
 
   // pixels on circle
   int circle3_[16][2];
