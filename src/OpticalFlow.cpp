@@ -28,9 +28,9 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
 
         iter++;
 
-    }   while ((newFlow - previousFlow).norm() > epsilon && iter < MAXITR);
+    }   while (F.calculateCost() > epsilon && iter < MAXITR);
         F.setConverged(
-        (newFlow - previousFlow).norm() <= epsilon
+        F.calculateCost() <= epsilon
         );
         if (F.checkHealth() > 3){
             return DEAD;

@@ -333,7 +333,7 @@ int Feature::getDeadCycles() const {
 }
 
 double Feature::calculateCost(){
-     double cost = 0.0;
+     
 
     for(std::size_t k = 0; k < currentEvents.size(); ++k){
         Eigen::Vector2d xk = currentEvents[k].pos();

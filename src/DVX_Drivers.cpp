@@ -111,6 +111,7 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
     logFile << "Timestamp (us): " << std::fixed << std::setprecision(0) << timestamp << "\n";
     logFile << "Status: " << statusStr << "\n";
     logFile << "Position: " << feature.getPosition().transpose() << "\n";
+    logFile << "cost:" << feature.getCost() << "\n";
     logFile << "Flow (px/us): " << std::setprecision(8) << feature.getFlow().transpose() << "\n";
     logFile << "Active Features: " << activeFeatures << "\n";
     logFile << "Dead Cycles: " << feature.getDeadCycles() << "\n";
@@ -157,7 +158,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 0.5;
+    const double epsilon = 25000;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;

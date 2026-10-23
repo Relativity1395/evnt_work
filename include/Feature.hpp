@@ -13,6 +13,7 @@ class Feature{
         double xi;
         double dti;
         double Ti;
+        double cost = 0.0;
         std::vector<Event> previousEvents;
         std::vector<Event> currentEvents;
         Eigen::Vector2d flow;
@@ -47,6 +48,7 @@ class Feature{
         bool findEventsInit(const std::vector<Event>& E);
         bool updateTimeWindow(double highestTimestamp);
         void generateKD();
+        double getCost() const {return cost;}
         Eigen::Vector2d getPosition() const;
         void updateFeature();
         double getMedianMagnitude();
