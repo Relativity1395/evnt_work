@@ -52,7 +52,7 @@ class Feature{
         double getMedianMagnitude();
         int checkHealth();
         int getDeadCycles() const;
-        double calculateCost();
+        double calculateCost() const;
         Eigen::Vector2d updateFlow();
         bool checkWindow();
         bool checkInitWindow();

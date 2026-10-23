@@ -332,7 +332,7 @@ int Feature::getDeadCycles() const {
     return dCycle;
 }
 
-double Feature::calculateCost(){
+double Feature::calculateCost() const {
      double cost = 0.0;
 
     for(std::size_t k = 0; k < currentEvents.size(); ++k){
