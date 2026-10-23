@@ -1,13 +1,17 @@
 #include <../include/OpticalFlow.hpp>
 
 //#define MAXITR 50000
-#define MAXITR 20
+#define MAXITR 5
+
 
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
+    double cost = 0.0;
     if (!F.checkWindow()){
         if (!F.findEventsInit(currEvents)){
             return INIT;
         }
+
+    
     }else{
         F.findEvents(currEvents); //collects current events within spatiotmeporal window
         if (!F.isWindowComplete(highestTimestamp)){
@@ -19,18 +23,19 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         Eigen::Vector2d previousFlow;
         Eigen::Vector2d newFlow;
         do {
+        // cost = 0.0;
         previousFlow = F.getFlow();
 
         F.updateBackPropagation();
         F.generateKD();
 
         newFlow = F.updateFlow();
-
+        cost = F.calculateCost();
         iter++;
 
-    }   while ((newFlow - previousFlow).norm() > epsilon && iter < MAXITR);
+    }   while (cost > epsilon && iter < MAXITR);
         F.setConverged(
-        (newFlow - previousFlow).norm() <= epsilon
+        cost <= epsilon
         );
         if (F.checkHealth() > 3){
             return DEAD;

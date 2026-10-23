@@ -112,7 +112,7 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
     logFile << "Status: " << statusStr << "\n";
     logFile << "Position: " << feature.getPosition().transpose() << "\n";
     logFile << "Flow (px/us): " << std::setprecision(8) << feature.getFlow().transpose() << "\n";
-    logFile << "Cost: " << feature.calculateCost() << "\n";
+    // logFile << "Cost: " << feature.calculateCost() << "\n";
     logFile << "Active Features: " << activeFeatures << "\n";
     logFile << "Dead Cycles: " << feature.getDeadCycles() << "\n";
     logFile << "Events in Window: " << feature.getEventCount() << "\n";
