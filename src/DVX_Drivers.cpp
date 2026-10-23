@@ -112,6 +112,7 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
     logFile << "Status: " << statusStr << "\n";
     logFile << "Position: " << feature.getPosition().transpose() << "\n";
     logFile << "Flow (px/us): " << std::setprecision(8) << feature.getFlow().transpose() << "\n";
+    logFile << "Cost: " << feature.calculateCost() << "\n";
     logFile << "Active Features: " << activeFeatures << "\n";
     logFile << "Dead Cycles: " << feature.getDeadCycles() << "\n";
     logFile << "Events in Window: " << feature.getEventCount() << "\n";
@@ -245,13 +246,13 @@ int main(void) {
                         currEvents.push_back(get_event(polarity, j));
                         const Event& ev = currEvents.back();
 
-                        // cv::circle(
-                        //     canvas,
-                        //     cv::Point(ev.position.x(), ev.position.y()),
-                        //     1,
-                        //     cv::Scalar(0, 0, 0),
-                        //     -1
-                        // );
+                        cv::circle(
+                            canvas,
+                            cv::Point(ev.position.x(), ev.position.y()),
+                            1,
+                            cv::Scalar(0, 0, 0),
+                            -1
+                        );
                         if (currEvents.back().timestamp > highestTimestamp){
                             highestTimestamp = currEvents.back().timestamp;
                         }
@@ -313,13 +314,13 @@ int main(void) {
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                //std::cout << "Calling FeatureCollection\n";
+                std::cout << "Calling FeatureCollection\n";
                 
                 int result = FeatureCollection(
                     currFeatures[i], currEvents, epsilon, highestTimestamp
                 );
 
-                //std::cout << "FeatureCollection returned: " << result << '\n';
+                std::cout << "FeatureCollection returned: " << result << '\n';
 
                 if (shouldLog || result == DEAD) {
                     logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), result);
@@ -330,9 +331,9 @@ int main(void) {
                     i--;
                     continue;
                 }
-                //std::cout << "Flow: "
-                //<< currFeatures[i].getFlow().transpose()
-                //<< '\n';
+                std::cout << "Flow: "
+                << currFeatures[i].getFlow().transpose()
+                << '\n';
                 // next to your "Features detected" print
                 
             }
@@ -346,7 +347,7 @@ int main(void) {
             // caerEventPacketContainerFree(packetContainer);
 
             // cv::imshow("Features", canvas);
-            if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
+            // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
             caerEventPacketContainerFree(packetContainer);
             currEvents.clear();
 
