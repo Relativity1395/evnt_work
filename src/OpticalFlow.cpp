@@ -1,5 +1,5 @@
 #include <../include/OpticalFlow.hpp>
-
+#include <../include/Feature.hpp>
 //#define MAXITR 50000
 #define MAXITR 20
 
@@ -14,15 +14,20 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
             return HEALTHY;
         }
         F.propagatePreviousEvents(); //turns previous events into landmarks
-
+        if (F.getLandmark().empty()) {
+            return HEALTHY;   // nothing to match against this window; skip EM
+        }
         int iter = INIT;
         Eigen::Vector2d previousFlow;
         Eigen::Vector2d newFlow;
+        my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
+        
+        
         do {
         previousFlow = F.getFlow();
 
         F.updateBackPropagation();
-        F.generateKD();
+        F.generateKD(mat_index);
 
         newFlow = F.updateFlow();
 

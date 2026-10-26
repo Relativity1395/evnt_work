@@ -8,7 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
+set (CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address -Wall -Wextra")
 find_path(LIBCAER_INCLUDE_DIR NAMES libcaer/libcaer.h
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/include)
 find_library(LIBCAER_LIB NAMES caer

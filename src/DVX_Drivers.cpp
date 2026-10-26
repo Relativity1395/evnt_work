@@ -347,34 +347,34 @@ int main(void) {
             // caerEventPacketContainerFree(packetContainer);
 
             // cv::imshow("Features", canvas);
-            if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC to quit
+            
             caerEventPacketContainerFree(packetContainer);
             currEvents.clear();
 
 // Draw all stored features as green circles
-            for (Feature& f : currFeatures) {
+            // for (Feature& f : currFeatures) {
 
-                Eigen::Vector2d pos = f.getPosition();
+            //     Eigen::Vector2d pos = f.getPosition();
 
-                cv::circle(
-                    canvas,
-                    cv::Point(
-                        static_cast<int>(pos.x()),
-                        static_cast<int>(pos.y())
-                    ),
-                    3,
-                    cv::Scalar(0, 255, 0),
-                    1
-                );
-            }
+            //     cv::circle(
+            //         canvas,
+            //         cv::Point(
+            //             static_cast<int>(pos.x()),
+            //             static_cast<int>(pos.y())
+            //         ),
+            //         3,
+            //         cv::Scalar(0, 255, 0),
+            //         1
+            //     );
+            // }
 
-            // Display camera output
-            cv::imshow("Features", canvas);
+            // // Display camera output
+            // // cv::imshow("Features", canvas);
 
-            if (cv::waitKey(1) == 27)
-                globalShutdown.store(true);
+            // // if (cv::waitKey(1) == 27)
+            // //     globalShutdown.store(true);
                         
-                }
+}
 
     // std::vector<int> temp;
     // for (int i = 0; i < (int)currFeatures.size(); i++){

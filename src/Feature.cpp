@@ -204,24 +204,22 @@ void Feature::updateBackPropagation(){
         bProp.push_back(backProp);
     }
 }
-void Feature::generateKD(){
+void Feature::generateKD(my_kd_tree_t& tree){
 
-    const double r2 = 4.2426;
-    const int dim = 2;
-    const int leaf = 10;
+
+    
 
     weights.clear();
     weights.resize(bProp.size());      // one entry per current event, always aligned
 
     if (landmark.empty()) return;      // no landmarks yet: all weight lists stay empty
 
-    typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
-    my_kd_tree_t mat_index(dim, landmark, leaf);
-    using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
+        
+    
 
     for (size_t i = 0; i < bProp.size(); i++){
         Matches matches;
-        mat_index.index->radiusSearch(bProp[i].data(), r2, matches);
+        tree.index->radiusSearch(bProp[i].data(), r2, matches);
 
         double sum = 0.0;
         for (const auto& m : matches){

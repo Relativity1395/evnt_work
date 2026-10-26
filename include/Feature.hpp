@@ -5,9 +5,16 @@
 #include <../include/WeightDist.hpp>
 #define MAXDELT 1000000
 // Per-feature state / related events tracking
+typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
+using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
 
 
+const double r2 = 4.2426;
+const int dim = 2;
+const int leaf = 10;
 class Feature{
+
+
     private:
         Eigen::Vector2d position;
         double xi;
@@ -47,7 +54,7 @@ class Feature{
         void findEvents(const std::vector<Event>& E);
         bool findEventsInit(const std::vector<Event>& E);
         bool updateTimeWindow(double highestTimestamp);
-        void generateKD();
+        void generateKD(my_kd_tree_t& tree);
         double getCost() const {return cost;}
         Eigen::Vector2d getPosition() const;
         void updateFeature();
@@ -62,4 +69,5 @@ class Feature{
         bool hasConverged() const;
         void setID(size_t newID) { id = newID; }
         size_t getID() const { return id; }
+        
 };
