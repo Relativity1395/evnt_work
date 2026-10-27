@@ -105,24 +105,21 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
     else
         statusStr = "ALIVE";
 
-    logFile << "FEATURE STATUS: \n";
+    logFile << feature.getID() << ","
+        << std::fixed << std::setprecision(0) << timestamp << ","
+        << statusStr << ","
+        << std::setprecision(6)
+        << feature.getPosition().x() << "," << feature.getPosition().y() << ","
+        << feature.getCost() << ","
+        << std::setprecision(8)
+        << feature.getFlow().x() << "," << feature.getFlow().y() << ","
+        << activeFeatures << ","
+        << feature.getEventCount() << ","
+        << (feature.hasConverged() ? "true" : "false") << "\n";
 
-    logFile << "Feature ID: " << feature.getID() << "\n";
-    logFile << "Timestamp (us): " << std::fixed << std::setprecision(0) << timestamp << "\n";
-    logFile << "Status: " << statusStr << "\n";
-    logFile << "Position: " << feature.getPosition().transpose() << "\n";
-    logFile << "cost:" << feature.getCost() << "\n";
-    logFile << "Flow (px/us): " << std::setprecision(8) << feature.getFlow().transpose() << "\n";
-    logFile << "Active Features: " << activeFeatures << "\n";
-    logFile << "Dead Cycles: " << feature.getDeadCycles() << "\n";
-    logFile << "Events in Window: " << feature.getEventCount() << "\n";
-    logFile << "Converged: " << std::boolalpha << feature.hasConverged() << "\n";
-
-    logFile << "\n\n";
 }
-
-
 int main(void) {
+
 #if defined(_WIN32)
     if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
     if (signal(SIGINT,  &globalShutdownSignalHandler) == SIG_ERR) return EXIT_FAILURE;
@@ -166,13 +163,19 @@ int main(void) {
     size_t nextFeatureID = 0;
     double lastLogTime = 0;
     const double LOG_INTERVAL = 100000.0;
-    std::ofstream logFile("feature_status.txt", std::ios::app);
+    std::ofstream logFile("feature_status.csv");
+
+    std::mutex logMutex;
+    std::lock_guard<std::mutex> lock(logMutex);
+    
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged\n" << "\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
         return 1;
     }
-
+    
+    
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
@@ -313,6 +316,8 @@ int main(void) {
 
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
+            
+
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 //std::cout << "Calling FeatureCollection\n";
                 
@@ -352,27 +357,27 @@ int main(void) {
             currEvents.clear();
 
 // Draw all stored features as green circles
-            // for (Feature& f : currFeatures) {
+            for (Feature& f : currFeatures) {
 
-            //     Eigen::Vector2d pos = f.getPosition();
+                Eigen::Vector2d pos = f.getPosition();
 
-            //     cv::circle(
-            //         canvas,
-            //         cv::Point(
-            //             static_cast<int>(pos.x()),
-            //             static_cast<int>(pos.y())
-            //         ),
-            //         3,
-            //         cv::Scalar(0, 255, 0),
-            //         1
-            //     );
-            // }
+                cv::circle(
+                    canvas,
+                    cv::Point(
+                        static_cast<int>(pos.x()),
+                        static_cast<int>(pos.y())
+                    ),
+                    3,
+                    cv::Scalar(0, 255, 0),
+                    1
+                );
+            }
 
             // // Display camera output
-            // // cv::imshow("Features", canvas);
+            cv::imshow("Features", canvas);
 
-            // // if (cv::waitKey(1) == 27)
-            // //     globalShutdown.store(true);
+            if (cv::waitKey(1) == 27)
+                globalShutdown.store(true);
                         
 }
 
