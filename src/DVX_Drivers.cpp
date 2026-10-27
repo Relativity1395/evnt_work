@@ -175,7 +175,7 @@ int main(void) {
         return 1;
     }
     
-    
+    auto lastDraw = std::chrono::steady_clock::now();
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
@@ -336,6 +336,19 @@ int main(void) {
                     i--;
                     continue;
                 }
+
+                Eigen::Vector2d pos = currFeatures[i].getPosition();
+
+                cv::circle(
+                    canvas,
+                    cv::Point(
+                        static_cast<int>(pos.x()),
+                        static_cast<int>(pos.y())
+                    ),
+                    3,
+                    cv::Scalar(0, 255, 0),
+                    1
+                );
                 //std::cout << "Flow: "
                 //<< currFeatures[i].getFlow().transpose()
                 //<< '\n';
@@ -357,21 +370,10 @@ int main(void) {
             currEvents.clear();
 
 // Draw all stored features as green circles
-            for (Feature& f : currFeatures) {
+            // for (Feature& f : currFeatures) {
 
-                Eigen::Vector2d pos = f.getPosition();
-
-                cv::circle(
-                    canvas,
-                    cv::Point(
-                        static_cast<int>(pos.x()),
-                        static_cast<int>(pos.y())
-                    ),
-                    3,
-                    cv::Scalar(0, 255, 0),
-                    1
-                );
-            }
+                
+            // }
 
             // // Display camera output
             cv::imshow("Features", canvas);

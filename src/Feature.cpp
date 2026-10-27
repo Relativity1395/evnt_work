@@ -314,7 +314,7 @@ double Feature::getMedianMagnitude() {
 }
 
 int Feature::checkHealth(){
-    badHealth = (!converged) || (currentEvents.size() < 5);
+    badHealth = (!converged) || (currentEvents.size() < 200000);
     if (badHealth){
         deadCycles++;
         

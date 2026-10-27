@@ -4,17 +4,24 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv("build/feature_status.csv")
 
-f = df[df.id == 0].sort_values("timestamp")
-conv = df[df.converged == True]
-df.groupby("id").timestamp.agg(["min", "max", "count"])
-df["umag"] = np.hypot(df.ux, df.uy)
-df.groupby("id").umag.mean()
-t = np.array((f.timestamp - f.timestamp.iloc[0]) / 1e6)
 
-plt.scatter(t, f.ux * 1e6, s=5, label="ux")
-plt.scatter(t, f.uy * 1e6, s=5, label="uy")
-plt.show()
-plt.legend()
+
+# f = df[df.id == 0].sort_values("timestamp")
+# conv = df[df.converged == True]
+# df.groupby("id").timestamp.agg(["min", "max", "count"])
+# # df["umag"] = np.hypot(df.ux, df.uy)
+# # df.groupby("id").umag.mean()
+# t = np.array((f.timestamp - f.timestamp.iloc[0]) / 1e6)
+
+# plt.scatter(t, f.ux)
+# # plt.scatter(t, f.uy * 1e6, s=5, label="uy")
+# plt.show()
+# plt.legend()
+
+for fid, f in df.groupby("id"):
+    f = f.sort_values("timestamp")
+    plt.scatter((f.timestamp - np.array(df.timestamp.min())) / 1e6, f.ux * 1e6)
+plt.xlabel("time (s)"); plt.ylabel("ux (px/s)"); plt.show()
 
 
 # plt.plot(t, np.array(f.cost))
