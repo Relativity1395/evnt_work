@@ -155,7 +155,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 25000;
+    const double epsilon = 80000;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
@@ -167,7 +167,7 @@ int main(void) {
 
     std::mutex logMutex;
     std::lock_guard<std::mutex> lock(logMutex);
-    
+
     logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged\n" << "\n";
 
     if (!logFile.is_open()) {
