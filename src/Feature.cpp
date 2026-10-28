@@ -278,6 +278,7 @@ void Feature::generateKD(my_kd_tree_t& tree){
 
 // }
 
+//state estimation 
 Eigen::Vector2d Feature::getPosition() const {
     Eigen::Vector2d pos = position;
     return pos;
