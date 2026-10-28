@@ -7,8 +7,8 @@ Feature::Feature(
     std::vector<Event> currentEvents,
     std::vector<Event> previousEvents,
     Eigen::Vector2d flow,
-    double xi
-){
+    double xi)
+{
     this->position = position;
     this->currentEvents = currentEvents;
     this->previousEvents= previousEvents;
@@ -99,7 +99,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         if ((backProp - position).norm() < xi){
             currentEvents.push_back(event);
             bProp.push_back(backProp);
-            if (currentEvents.size() >= 300) break;
+            if (currentEvents.size() >= 2000) break;
         }
     }
     return checkInitWindow();
@@ -209,18 +209,10 @@ void Feature::updateBackPropagation(){
     }
 }
 void Feature::generateKD(my_kd_tree_t& tree){
-
-
-    
-
     weights.clear();
     weights.resize(bProp.size());      // one entry per current event, always aligned
 
     if (landmark.empty()) return;      // no landmarks yet: all weight lists stay empty
-
-        
-    
-
     for (size_t i = 0; i < bProp.size(); i++){
         Matches matches;
         tree.index->radiusSearch(bProp[i].data(), r2, matches);
@@ -298,7 +290,7 @@ double Feature::getMedianMagnitude() {
     magnitudes.reserve(t_flow.size()); // Pre-allocate memory for performance
     
     for (const auto& vec : t_flow) {
-        magnitudes.push_back(vec.norm());
+        magnitudes.push_back(vec);
     }
 
     // 2. Perform a partial linear-time O(N) sort for the median
@@ -335,8 +327,6 @@ int Feature::getDeadCycles() const {
 }
 
 double Feature::calculateCost(){
-     
-
     for(std::size_t k = 0; k < currentEvents.size(); ++k){
         Eigen::Vector2d xk = currentEvents[k].pos();
         double tbar = currentEvents[k].t() - Ti;
@@ -374,6 +364,10 @@ Eigen::Vector2d Feature::updateFlow(){
         }       
         Eigen::Vector2d u = numerator/denominator;
         flow = u;
+        t_flow.push_back(flow.norm());
+        if ((int)t_flow.size() > 5){
+            t_flow.erase(t_flow.begin());
+        }
         return u;
 }
 

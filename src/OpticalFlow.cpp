@@ -4,6 +4,11 @@
 #define MAXITR 100
 
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
+    int iter = INIT;
+    Eigen::Vector2d previousFlow;
+    Eigen::Vector2d newFlow;
+    my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
+
     if (!F.checkWindow()){
         if (!F.findEventsInit(currEvents)){
             return INIT;
@@ -17,10 +22,7 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         if (F.getLandmark().empty()) {
             return HEALTHY;   // nothing to match against this window; skip EM
         }
-        int iter = INIT;
-        Eigen::Vector2d previousFlow;
-        Eigen::Vector2d newFlow;
-        my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
+        
         
         
         do {
