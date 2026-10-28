@@ -42,9 +42,9 @@ bool Feature::hasConverged() const {
     return converged;
 }
 void Feature::setEvents(){
-    this->previousEvents = this->currentEvents;
+    //swap keeps both buffer capacity, so the next window doesnt reallocate
+    std::swap(previousEvents, currentEvents);
     currentEvents.clear();
-    // this->currentEvents = newEvents;
 }
 void Feature::findEvents(const std::vector<Event>& E){
 
