@@ -167,6 +167,7 @@ bool Feature::updateTimeWindow(double highestTimestamp){
 
     return false;
 }
+
 // bool Feature::updateTimeWindow(double highestTimestamp){
 //     if (dti == 0){
 //         dti = currentEvents.back().t() - Ti;
@@ -183,6 +184,7 @@ bool Feature::updateTimeWindow(double highestTimestamp){
 //     }
 //     return false;
 // }   
+
 void Feature::propagatePreviousEvents(){
     landmark.clear();
     for(const Event& event : previousEvents){
@@ -192,6 +194,8 @@ void Feature::propagatePreviousEvents(){
         landmark.push_back(propagatedEvent);
     }
 }
+
+
 void Feature::updateBackPropagation(){
     bProp.clear();
 
