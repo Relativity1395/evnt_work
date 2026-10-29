@@ -26,7 +26,7 @@ class Feature{
         Eigen::Vector2d flow;
         std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
-        std::vector<Eigen::Vector2d> t_flow;
+        std::vector<double> t_flow;
         std::vector<std::vector<Association>> weights;
         bool badHealth = false;
         bool converged = false;

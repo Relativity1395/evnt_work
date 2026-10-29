@@ -299,11 +299,11 @@ int main(void) {
                             // std::cout<< "feature position x: " << evnt.x << std::endl;
                             // std::cout<< "feature position y: " << evnt.y << std::endl;
                         }
-                        // else if (evnt.p == 1){
-                        // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                        // }else{
-                        //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
-                        // }
+                    // if (ev.polarity == 1){
+                    // cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()), radius, cv::Scalar(255, 255, 255), thickness);
+                    // }else{
+                    //     cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()), radius, cv::Scalar(0, 0, 0), thickness);
+                    // }
                     }    
                 }
             }

@@ -99,7 +99,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         if ((backProp - position).norm() < xi){
             currentEvents.push_back(event);
             bProp.push_back(backProp);
-            if (currentEvents.size() >= 300) break;
+            if (currentEvents.size() >= 2000) break;
         }
     }
     return checkInitWindow();
@@ -295,7 +295,7 @@ double Feature::getMedianMagnitude() {
     magnitudes.reserve(t_flow.size()); // Pre-allocate memory for performance
     
     for (const auto& vec : t_flow) {
-        magnitudes.push_back(vec.norm());
+        magnitudes.push_back(vec);
     }
 
     // 2. Perform a partial linear-time O(N) sort for the median
@@ -315,7 +315,7 @@ double Feature::getMedianMagnitude() {
 }
 
 int Feature::checkHealth(){
-    badHealth = (!converged) || (currentEvents.size() < 200000);
+    badHealth = (!converged) || (currentEvents.size() < 2000);
     if (badHealth){
         deadCycles++;
         
@@ -371,6 +371,10 @@ Eigen::Vector2d Feature::updateFlow(){
         }       
         Eigen::Vector2d u = numerator/denominator;
         flow = u;
+        t_flow.push_back(flow.norm());
+        if ((int)t_flow.size() > 5){
+            t_flow.erase(t_flow.begin());
+        }
         return u;
 }
 
