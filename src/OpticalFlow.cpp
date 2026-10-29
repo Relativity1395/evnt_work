@@ -1,9 +1,9 @@
 #include <../include/OpticalFlow.hpp>
 #include <../include/Feature.hpp>
+#include <limits>
+#include <cmath>
 //#define MAXITR 50000
 #define MAXITR 15
-
-
 
 
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
@@ -14,38 +14,67 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         }
     }else{
         F.findEvents(currEvents); //collects current events within spatiotmeporal window
-        if (!F.isWindowComplete(highestTimestamp)){
+
+        if (!F.isWindowComplete(highestTimestamp)) {
             return HEALTHY;
         }
+
         F.propagatePreviousEvents(); //turns previous events into landmarks
+
         if (F.getLandmark().empty()) {
-            return HEALTHY;   // nothing to match against this window; skip EM
+            F.setConverged(false);
+
+            if (F.checkHealth() > 3) {
+                F.assignAlive(DEAD);
+                return DEAD;
+            }
+
+            if (F.updateTimeWindow(highestTimestamp)) {
+                F.setEvents();
+            }
+
+            return HEALTHY;
         }
-        int iter = INIT;
-        Eigen::Vector2d previousFlow;
-        Eigen::Vector2d newFlow;
+
         my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
         
-        
+        int iter = 0;
+        double previousCost = std::numeric_limits<double>::infinity();
+        double currentCost;
+        bool converged = false;
+
         do {
-        previousFlow = F.getFlow();
+            F.updateBackPropagation();
+            F.generateKD(mat_index);
 
-        F.updateBackPropagation();
-        F.generateKD(mat_index);
+            if (!F.hasAssociations()) {
+                break;
+            }
 
-        newFlow = F.updateFlow();
+            F.updateFlow();
 
-        iter++;
+            currentCost = F.calculateCost();
 
-    }   while (F.calculateCost() > epsilon && iter < MAXITR);
-        F.setConverged(
-        F.calculateCost() <= epsilon
-        );
+            if (std::abs(currentCost - previousCost) <= epsilon) {
+                converged = true;
+                break;
+            }
+
+            previousCost = currentCost;
+            iter++;
+
+        } while (iter < MAXITR);
+
+        F.setConverged(converged);
+
         if (F.checkHealth() > 3){
             F.assignAlive(DEAD);
             return DEAD;
         }
-        F.updatePosition(F.getDti());
+        if (converged) {
+            F.updatePosition(F.getDti());
+            F.recordFlow();
+        }
     }   
     if (F.updateTimeWindow(highestTimestamp)){
         F.setEvents();

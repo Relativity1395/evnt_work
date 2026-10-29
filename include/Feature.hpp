@@ -52,11 +52,13 @@ class Feature{
         bool isWindowComplete(double highestTimestamp) const;
         void setConverged(bool status); 
         void propagatePreviousEvents();
+        bool hasAssociations() const;
         const std::vector<Eigen::Vector2d>& getLandmark() const;
         void setEvents();
         void findEvents(const std::vector<Event>& E);
         bool findEventsInit(const std::vector<Event>& E);
         bool updateTimeWindow(double highestTimestamp);
+        void recordFlow();
         void generateKD(my_kd_tree_t& tree);
         double getCost() const {return cost;}
         Eigen::Vector2d getPosition() const;

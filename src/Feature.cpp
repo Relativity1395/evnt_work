@@ -41,6 +41,13 @@ size_t Feature::getEventCount() const {
 bool Feature::hasConverged() const {
     return converged;
 }
+void Feature::recordFlow() {
+    t_flow.push_back(flow.norm());
+
+    if (t_flow.size() > 5) {
+        t_flow.erase(t_flow.begin());
+    }
+}
 void Feature::setEvents(){
     //swap keeps both buffer capacity, so the next window doesnt reallocate
     std::swap(previousEvents, currentEvents);
@@ -327,6 +334,15 @@ int Feature::getDeadCycles() const {
     return dCycle;
 }
 
+bool Feature::hasAssociations() const {
+    for (const auto& eventWeights : weights) {
+        if (!eventWeights.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 double Feature::calculateCost() {
     cost = 0.0;
 
@@ -367,10 +383,6 @@ Eigen::Vector2d Feature::updateFlow(){
         }       
         Eigen::Vector2d u = numerator/denominator;
         flow = u;
-        t_flow.push_back(flow.norm());
-        if ((int)t_flow.size() > 5){
-            t_flow.erase(t_flow.begin());
-        }
         return u;
 }
 
