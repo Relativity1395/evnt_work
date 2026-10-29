@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("feature_status.csv")
+df = pd.read_csv("build/feature_status.csv")
 
 
 
@@ -34,7 +34,7 @@ for id_val, group in df.groupby("id"):
     # Calculate the net price change (last price minus first price)
     px_change = group["px"].iloc[-1] - group["px"].iloc[0]
 
-    if px_change > 10:
+    if abs(px_change) < 10:
         displacement[px_change] = id_val
 
     
@@ -50,7 +50,7 @@ for id_val, group in df.groupby("id"):
     # plt.plot(t, group['px'])
 
     plt.title(f"ID: {id_val}")
-max_displacement_id = displacement[max(displacement.keys())]
+max_displacement_id = displacement[min(displacement.keys())]
 print()
 
 
@@ -58,7 +58,7 @@ f = df[df.id == max_displacement_id].sort_values("timestamp")
 t = f.timestamp - df.timestamp.min()
 
 print
-plt.plot(np.array(f.timestamp - df.timestamp.min()) / 1e6, np.array(f.px))
+plt.scatter(np.array(f.events), np.array(f.cost))
 plt.show()
 
 
