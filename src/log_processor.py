@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv("feature_status.csv")
 
-
-
-
 # conv = df[df.converged == True]
 # df.groupby("id").timestamp.agg(["min", "max", "count"])
 # # df["umag"] = np.hypot(df.ux, df.uy)

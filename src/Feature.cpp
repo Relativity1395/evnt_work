@@ -327,7 +327,9 @@ int Feature::getDeadCycles() const {
     return dCycle;
 }
 
-double Feature::calculateCost(){
+double Feature::calculateCost() {
+    cost = 0.0;
+
     for(std::size_t k = 0; k < currentEvents.size(); ++k){
         Eigen::Vector2d xk = currentEvents[k].pos();
         double tbar = currentEvents[k].t() - Ti;
@@ -341,7 +343,7 @@ double Feature::calculateCost(){
         }
     }
             
-        return cost;
+    return cost;
 }
 
 Eigen::Vector2d Feature::updateFlow(){
