@@ -18,10 +18,8 @@ df = pd.read_csv("build/feature_status.csv")
 # plt.show()
 # plt.legend()
 
-for fid, f in df.groupby("id"):
-    f = f.sort_values("timestamp")
-    plt.scatter((f.timestamp - np.array(df.timestamp.min())) / 1e6, f.ux * 1e6)
-plt.xlabel("time (s)"); plt.ylabel("ux (px/s)"); plt.show()
+f = df[df.id == 22].sort_values("timestamp")
+print(f[["timestamp","cost","px","py"]])
 
 
 # plt.plot(t, np.array(f.cost))

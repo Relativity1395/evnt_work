@@ -32,8 +32,11 @@ class Feature{
         bool converged = false;
         int deadCycles = 0;
         size_t id;
+        bool health = false;
 
     public:
+
+    //Feature tracking
         void updateBackPropagation();
         double getDti() const;
         void updatePosition(double deltaTime);
@@ -69,5 +72,11 @@ class Feature{
         bool hasConverged() const;
         void setID(size_t newID) { id = newID; }
         size_t getID() const { return id; }
+        double getWindowSize() const { return Ti + dti;}
+        void assignAlive(bool alive) {health = alive;}
+        bool getHealth() const {return badHealth;}
+    //3D projection
+        void featureProjection(); //takes 2D points and projects them into 3D space
+
         
 };

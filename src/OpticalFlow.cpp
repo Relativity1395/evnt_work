@@ -1,16 +1,15 @@
 #include <../include/OpticalFlow.hpp>
 #include <../include/Feature.hpp>
 //#define MAXITR 50000
-#define MAXITR 100
+#define MAXITR 15
+
+
+
 
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
-    int iter = INIT;
-    Eigen::Vector2d previousFlow;
-    Eigen::Vector2d newFlow;
-    my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
-
     if (!F.checkWindow()){
         if (!F.findEventsInit(currEvents)){
+            F.assignAlive(INIT);
             return INIT;
         }
     }else{
@@ -22,7 +21,10 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         if (F.getLandmark().empty()) {
             return HEALTHY;   // nothing to match against this window; skip EM
         }
-        
+        int iter = INIT;
+        Eigen::Vector2d previousFlow;
+        Eigen::Vector2d newFlow;
+        my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
         
         
         do {
@@ -40,6 +42,7 @@ int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double e
         F.calculateCost() <= epsilon
         );
         if (F.checkHealth() > 3){
+            F.assignAlive(DEAD);
             return DEAD;
         }
         F.updatePosition(F.getDti());

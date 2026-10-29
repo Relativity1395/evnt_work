@@ -99,7 +99,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         if ((backProp - position).norm() < xi){
             currentEvents.push_back(event);
             bProp.push_back(backProp);
-            if (currentEvents.size() >= 2000) break;
+            if (currentEvents.size() >= 250) break;
         }
     }
     return checkInitWindow();
@@ -310,8 +310,9 @@ double Feature::getMedianMagnitude() {
 }
 
 int Feature::checkHealth(){
-    badHealth = (!converged) || (currentEvents.size() < 200000);
-    if (badHealth){
+    badHealth = (!converged) || (currentEvents.size() < 100);
+    // std::cout << "Badhealth: " << badHealth <<" Current events: " << currentEvents.size() << std::endl;
+    if (badHealth == true){
         deadCycles++;
         
     }
@@ -376,5 +377,5 @@ bool Feature::checkWindow(){
 }
 
 bool Feature::checkInitWindow(){
-    return (currentEvents.size() >= 300);
+    return (currentEvents.size() >= 200);
 }

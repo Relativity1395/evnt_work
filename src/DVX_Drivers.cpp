@@ -115,7 +115,8 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << feature.getFlow().x() << "," << feature.getFlow().y() << ","
         << activeFeatures << ","
         << feature.getEventCount() << ","
-        << (feature.hasConverged() ? "true" : "false") << "\n";
+        << (feature.hasConverged() ? "true" : "false")
+        << feature.getWindowSize() << "," << "\n";
 
 }
 int main(void) {
@@ -155,7 +156,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 80000;
+    const double epsilon = 100000;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
@@ -168,7 +169,7 @@ int main(void) {
     std::mutex logMutex;
     std::lock_guard<std::mutex> lock(logMutex);
 
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size\n" << "\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
@@ -308,34 +309,38 @@ int main(void) {
                 }
             }
             
-            std::cout << "Features detected: " << currFeatures.size() << '\n';
-            std::cout << "Batch events: " << batchEvents
-                << " | eFAST corners: " << batchCorners
-                << " | Active features: " << currFeatures.size()
-                << std::endl;
+            // std::cout << "Features detected: " << currFeatures.size() << '\n';
+            // std::cout << "Batch events: " << batchEvents
+            //     << " | eFAST corners: " << batchCorners
+            //     << " | Active features: " << currFeatures.size()
+            //     << std::endl;
 
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
-            
-
+            #pragma omp parallel for
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 //std::cout << "Calling FeatureCollection\n";
                 
                 int result = FeatureCollection(
                     currFeatures[i], currEvents, epsilon, highestTimestamp
                 );
+            }
 
                 //std::cout << "FeatureCollection returned: " << result << '\n';
-
-                if (shouldLog || result == DEAD) {
-                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), result);
+            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+                if (shouldLog || currFeatures[i].getHealth() == DEAD) {
+                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
                 }
+                // std::cout << currFeatures[i].getWindowSize() << std::endl;
+                std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " NUMBER OF EVENTS: " << currFeatures[i].getEventCount() << std::endl;
+                if (currFeatures[i].getHealth() == DEAD) {
 
-                if (result == DEAD) {
+                    std::cout << "feature died" << std::endl;
                     currFeatures.erase(currFeatures.begin() + i);
                     i--;
                     continue;
                 }
+
 
                 Eigen::Vector2d pos = currFeatures[i].getPosition();
 
@@ -360,8 +365,8 @@ int main(void) {
                 lastLogTime = highestTimestamp;
             }
             
-            std::cout << "events: " << evCount << "  detector true: " << detCount
-            << "  MAXFEAT: " << MAXFEAT << '\n';    
+            // std::cout << "events: " << evCount << "  detector true: " << detCount
+            // << "  MAXFEAT: " << MAXFEAT << '\n';    
             // caerEventPacketContainerFree(packetContainer);
 
             // cv::imshow("Features", canvas);
@@ -382,6 +387,7 @@ int main(void) {
                 globalShutdown.store(true);
                         
 }
+    
 
     // std::vector<int> temp;
     // for (int i = 0; i < (int)currFeatures.size(); i++){
