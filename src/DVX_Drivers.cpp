@@ -156,7 +156,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 100000;
+    const double epsilon = 5000;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
@@ -332,7 +332,7 @@ int main(void) {
                     logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
-                std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " NUMBER OF EVENTS: " << currFeatures[i].getEventCount() << std::endl;
+                // std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
                 if (currFeatures[i].getHealth() == DEAD) {
 
                     std::cout << "feature died" << std::endl;
@@ -344,16 +344,16 @@ int main(void) {
 
                 Eigen::Vector2d pos = currFeatures[i].getPosition();
 
-                cv::circle(
-                    canvas,
-                    cv::Point(
-                        static_cast<int>(pos.x()),
-                        static_cast<int>(pos.y())
-                    ),
-                    3,
-                    cv::Scalar(0, 255, 0),
-                    1
-                );
+                // cv::circle(
+                //     canvas,
+                //     cv::Point(
+                //         static_cast<int>(pos.x()),
+                //         static_cast<int>(pos.y())
+                //     ),
+                //     3,
+                //     cv::Scalar(0, 255, 0),
+                //     1
+                // );
                 //std::cout << "Flow: "
                 //<< currFeatures[i].getFlow().transpose()
                 //<< '\n';
@@ -381,10 +381,10 @@ int main(void) {
             // }
 
             // // Display camera output
-            cv::imshow("Features", canvas);
+            // cv::imshow("Features", canvas);
 
-            if (cv::waitKey(1) == 27)
-                globalShutdown.store(true);
+            // if (cv::waitKey(1) == 27)
+                // globalShutdown.store(true);
                         
 }
     

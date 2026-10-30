@@ -58,7 +58,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         }
 
         Eigen::Vector2d x = event.pos();
-        double tbar = t - Ti;
+        double tbar = (t - Ti);
 
         Eigen::Vector2d backProp = x - tbar * flow;
 
@@ -94,7 +94,7 @@ void Feature::findEvents(const std::vector<Event>& E){
         continue;
         }
         Eigen::Vector2d x = event.pos();
-        double tbar = event.t() - Ti;
+        double tbar = (event.t() - Ti);
         Eigen::Vector2d backProp = x - tbar * flow;
         if ((backProp - position).norm() < xi){
             currentEvents.push_back(event);
@@ -200,7 +200,7 @@ void Feature::updateBackPropagation(){
     bProp.clear();
 
     for (const Event& event : currentEvents){
-        double tbar = event.t() - Ti;
+        double tbar = (event.t() - Ti);
 
         Eigen::Vector2d backProp =
             event.pos() - tbar * flow;
@@ -332,12 +332,16 @@ double Feature::calculateCost() {
 
     for(std::size_t k = 0; k < currentEvents.size(); ++k){
         Eigen::Vector2d xk = currentEvents[k].pos();
-        double tbar = currentEvents[k].t() - Ti;
+        
+        double tbar = (currentEvents[k].t() - Ti);
         for(const Association& association : weights[k]){
             double rkj = association.weight;
             std::size_t j = association.landmarkIndex;
             Eigen::Vector2d currLandmark = landmark[j];
             Eigen::Vector2d mag = (xk - tbar * flow) - currLandmark;
+
+            // std::cout << "backpropogated: " << (xk - tbar * flow) << std::endl;
+            // std::cout << "normal: " << (xk) << std::endl;
             cost += rkj * mag.squaredNorm();
             
         }
@@ -352,7 +356,11 @@ Eigen::Vector2d Feature::updateFlow(){
 
         for(std::size_t k = 0; k < currentEvents.size(); ++k){
             Eigen::Vector2d xk = currentEvents[k].pos();
-            double tbar = currentEvents[k].t() - Ti;
+            double tbar = (currentEvents[k].t() - Ti);
+
+            // std::cout << tbar << std::endl;
+            // std::cout << Ti << std::endl;
+            // std::cout << currentEvents[k].t() << std::endl;
             for(const Association& association : weights[k]){
                 double rkj = association.weight;
                 std::size_t j = association.landmarkIndex;

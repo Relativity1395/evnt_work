@@ -1,7 +1,7 @@
 #include <../include/OpticalFlow.hpp>
 #include <../include/Feature.hpp>
 //#define MAXITR 50000
-#define MAXITR 15
+#define MAXITR 100
 
 
 

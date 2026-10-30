@@ -31,7 +31,8 @@ for id_val, group in df.groupby("id"):
     # Calculate the net price change (last price minus first price)
     px_change = group["px"].iloc[-1] - group["px"].iloc[0]
 
-    if abs(px_change) < 10:
+    # print(px_change)
+    if abs(px_change) > 3:
         displacement[px_change] = id_val
 
     
@@ -47,15 +48,21 @@ for id_val, group in df.groupby("id"):
     # plt.plot(t, group['px'])
 
     plt.title(f"ID: {id_val}")
-max_displacement_id = displacement[min(displacement.keys())]
-print()
+max_displacement_id = displacement[max(displacement.keys())]
+
+print(max_displacement_id)
+
+print(max(displacement.keys()))
 
 
-f = df[df.id == max_displacement_id].sort_values("timestamp")
+
+f = df[df.id == 53].sort_values("timestamp")
 t = f.timestamp - df.timestamp.min()
 
-print
-plt.scatter(np.array(f.events), np.array(f.cost))
+plt.scatter(np.array(df["px"]), np.array(df["id"]))
+
+# plt.plot(np.array(t), np.array(f.px))
+
 plt.show()
 
 
