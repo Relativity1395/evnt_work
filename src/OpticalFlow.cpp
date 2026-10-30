@@ -3,7 +3,7 @@
 #include <limits>
 #include <cmath>
 //#define MAXITR 50000
-#define MAXITR 15
+#define MAXITR 100
 
 
 int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
