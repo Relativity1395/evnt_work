@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-with open("../build/feature_status.txt") as file:
+with open("/home/drone_laptop/feature_status.txt") as file:
     
     i = 0
     collect_velocity = False

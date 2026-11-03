@@ -156,7 +156,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 5000;
+    const double epsilon = 200;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
@@ -169,7 +169,7 @@ int main(void) {
     std::mutex logMutex;
     std::lock_guard<std::mutex> lock(logMutex);
 
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size, iters\n" << "\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
@@ -344,16 +344,16 @@ int main(void) {
 
                 Eigen::Vector2d pos = currFeatures[i].getPosition();
 
-                // cv::circle(
-                //     canvas,
-                //     cv::Point(
-                //         static_cast<int>(pos.x()),
-                //         static_cast<int>(pos.y())
-                //     ),
-                //     3,
-                //     cv::Scalar(0, 255, 0),
-                //     1
-                // );
+                cv::circle(
+                    canvas,
+                    cv::Point(
+                        static_cast<int>(pos.x()),
+                        static_cast<int>(pos.y())
+                    ),
+                    3,
+                    cv::Scalar(0, 255, 0),
+                    1
+                );
                 //std::cout << "Flow: "
                 //<< currFeatures[i].getFlow().transpose()
                 //<< '\n';
@@ -381,10 +381,7 @@ int main(void) {
             // }
 
             // // Display camera output
-            // cv::imshow("Features", canvas);
-
-            // if (cv::waitKey(1) == 27)
-                // globalShutdown.store(true);
+            
                         
 }
     
@@ -395,7 +392,7 @@ int main(void) {
     //         std::cout << "IRan";
     //         temp[i] = 1;
     //     }
-        
+        `
     // }
 
     // for (int i = 0; i < (int)temp.size(); i++){

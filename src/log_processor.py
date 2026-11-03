@@ -32,14 +32,14 @@ for id_val, group in df.groupby("id"):
     px_change = group["px"].iloc[-1] - group["px"].iloc[0]
 
     # print(px_change)
-    if abs(px_change) > 3:
+    if abs(px_change) > 0:
         displacement[px_change] = id_val
 
     
     # Plot the result
     # (Note: Standard scatter plots usually require both an X and Y array of matching lengths.
     # If you just want to plot the single net change against the ID, you can do this:)
-    # plt.scatter(id_val, px_change)
+    plt.scatter(id_val, px_change)
 
    
 
@@ -59,9 +59,9 @@ print(max(displacement.keys()))
 f = df[df.id == 53].sort_values("timestamp")
 t = f.timestamp - df.timestamp.min()
 
-plt.scatter(np.array(df["px"]), np.array(df["id"]))
+# plt.scatter(np.array(df["px"]), np.array(df["py"]))
 
-# plt.plot(np.array(t), np.array(f.px))
+# plt.plot(np.array(t), np.array(f.ux))
 
 plt.show()
 
