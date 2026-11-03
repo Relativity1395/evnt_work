@@ -116,7 +116,8 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << activeFeatures << ","
         << feature.getEventCount() << ","
         << (feature.hasConverged() ? "true" : "false") << ","
-        << feature.getWindowSize() << "," << "\n";
+        << feature.getWindowSize() << ","
+        << feature.getIters() << "\n";
 
 }
 int main(void) {
@@ -156,7 +157,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 5000;
+    const double epsilon = 1e-3; // EM stops when cost changes by less than 0.1% between iterations
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
@@ -166,10 +167,7 @@ int main(void) {
     const double LOG_INTERVAL = 10.0;
     std::ofstream logFile("feature_status.csv");
 
-    std::mutex logMutex;
-    std::lock_guard<std::mutex> lock(logMutex);
-
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size, iters\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
@@ -180,7 +178,6 @@ int main(void) {
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
-            canvas.setTo(cv::Scalar(128, 128, 128));
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -245,8 +242,8 @@ int main(void) {
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
                     tempFeatures.clear();
                     for (int32_t j = 0; j < eventNum; j++) {
-                        
-                        
+                        // skip invalid events here; get_event() would exit() the whole program
+                        if (!caerPolarityEventIsValid(caerPolarityEventPacketGetEvent(polarity, j))) continue;
                         currEvents.push_back(get_event(polarity, j));
                         const Event& ev = currEvents.back();
 
@@ -317,49 +314,28 @@ int main(void) {
 
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
+            // keep each feature's return code: getHealth() is a bool, so comparing it to DEAD (=1)
+            // erased features after ONE bad window and the deadCycles > 3 grace period never ran
+            std::vector<int> status(currFeatures.size());
             #pragma omp parallel for
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                //std::cout << "Calling FeatureCollection\n";
-                
-                int result = FeatureCollection(
-                    currFeatures[i], currEvents, epsilon, highestTimestamp
-                );
+                status[i] = FeatureCollection(currFeatures[i], currEvents, epsilon, highestTimestamp);
             }
 
-                //std::cout << "FeatureCollection returned: " << result << '\n';
-            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                if (shouldLog || currFeatures[i].getHealth() == DEAD) {
-                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
+            std::vector<Feature> alive;
+            alive.reserve(currFeatures.size());
+            for (size_t i = 0; i < currFeatures.size(); i++) {
+                if (shouldLog || status[i] == DEAD) {
+                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), status[i]);
                 }
-                // std::cout << currFeatures[i].getWindowSize() << std::endl;
-                // std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
-                if (currFeatures[i].getHealth() == DEAD) {
-
-                    std::cout << "feature died" << std::endl;
-                    currFeatures.erase(currFeatures.begin() + i);
-                    i--;
-                    continue;
-                }
-
+                if (status[i] == DEAD) continue;
 
                 Eigen::Vector2d pos = currFeatures[i].getPosition();
-
-                cv::circle(
-                    canvas,
-                    cv::Point(
-                        static_cast<int>(pos.x()),
-                        static_cast<int>(pos.y())
-                    ),
-                    3,
-                    cv::Scalar(0, 255, 0),
-                    1
-                );
-                //std::cout << "Flow: "
-                //<< currFeatures[i].getFlow().transpose()
-                //<< '\n';
-                // next to your "Features detected" print
-                
+                cv::circle(canvas, cv::Point(static_cast<int>(pos.x()), static_cast<int>(pos.y())),
+                           3, cv::Scalar(0, 255, 0), 1);
+                alive.push_back(std::move(currFeatures[i]));
             }
+            currFeatures.swap(alive);
 
             if (shouldLog) {
                 lastLogTime = highestTimestamp;
@@ -374,16 +350,14 @@ int main(void) {
             caerEventPacketContainerFree(packetContainer);
             currEvents.clear();
 
-// Draw all stored features as green circles
-            // for (Feature& f : currFeatures) {
-
-                
-            // }
-
-            // // Display camera output
-            
-            cv::imshow("Features", canvas);  
-            cv::waitKey(1);           
+            // waitKey blocks >= 1 ms, so draw at ~30 Hz instead of on every packet container
+            auto now = std::chrono::steady_clock::now();
+            if (now - lastDraw >= std::chrono::milliseconds(33)) {
+                cv::imshow("Features", canvas);
+                if (cv::waitKey(1) == 27) globalShutdown.store(true); // ESC to quit
+                canvas.setTo(cv::Scalar(128, 128, 128));
+                lastDraw = now;
+            }           
 }
     
 

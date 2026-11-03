@@ -9,7 +9,7 @@ typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
 
 
-const double r2 = 18;
+const double r2 = 18; // nanoflann radiusSearch takes the SQUARED radius: (3*sqrt(2) px)^2
 const int dim = 2;
 const int leaf = 10;
 class Feature{
@@ -32,6 +32,7 @@ class Feature{
         bool converged = false;
         int deadCycles = 0;
         size_t id;
+        int iters = 0;
         bool health = false;
 
     public:
@@ -72,6 +73,8 @@ class Feature{
         bool hasConverged() const;
         void setID(size_t newID) { id = newID; }
         size_t getID() const { return id; }
+        void setIters(int n) { iters = n; }
+        int getIters() const { return iters; }
         double getWindowSize() const { return dti;}
         void assignAlive(bool alive) {health = alive;}
         bool getHealth() const {return badHealth;}

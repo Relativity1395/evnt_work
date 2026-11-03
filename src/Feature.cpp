@@ -65,7 +65,6 @@ void Feature::findEvents(const std::vector<Event>& E){
         if ((backProp - position).norm() <= xi){
 
             currentEvents.push_back(event);
-            bProp.push_back(backProp);
         }
     }
 }
@@ -98,7 +97,6 @@ void Feature::findEvents(const std::vector<Event>& E){
         Eigen::Vector2d backProp = x - tbar * flow;
         if ((backProp - position).norm() < xi){
             currentEvents.push_back(event);
-            bProp.push_back(backProp);
             if (currentEvents.size() >= 250) break;
         }
     }
@@ -213,9 +211,11 @@ void Feature::generateKD(my_kd_tree_t& tree){
     weights.resize(bProp.size());      // one entry per current event, always aligned
 
     if (landmark.empty()) return;      // no landmarks yet: all weight lists stay empty
+    Matches matches;                   // reused: radiusSearch clears it, keeps the capacity
+    nanoflann::SearchParameters params;
+    params.sorted = false;             // weights don't need distance order, skip the sort
     for (size_t i = 0; i < bProp.size(); i++){
-        Matches matches;
-        tree.index->radiusSearch(bProp[i].data(), r2, matches);
+        tree.index->radiusSearch(bProp[i].data(), r2, matches, params);
 
         double sum = 0.0;
         for (const auto& m : matches){

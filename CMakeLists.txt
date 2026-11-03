@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set (CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release) # defines NDEBUG: turns off Eigen bounds/size asserts
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address -Wall -Wextra")
 find_path(LIBCAER_INCLUDE_DIR NAMES libcaer/libcaer.h
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/include)
@@ -16,6 +16,7 @@ find_library(LIBCAER_LIB NAMES caer
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/lib)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
+find_package(OpenMP REQUIRED)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
 # evio_core algorithm itself
@@ -58,6 +59,7 @@ target_link_libraries(dvxplore_simple PRIVATE
   pthread
   rt
   ${OpenCV_LIBS}
+  OpenMP::OpenMP_CXX # without this the "#pragma omp parallel for" is silently ignored
 )
 
 # unit tests
@@ -65,3 +67,6 @@ target_link_libraries(dvxplore_simple PRIVATE
 #   unit_tests/test_feature.cpp
 # )
 # target_link_libraries(test_feature PRIVATE evio_core)
+
+add_executable(test_em_convergence unit_tests/test_em_convergence.cpp)
+target_link_libraries(test_em_convergence PRIVATE evio_core)
