@@ -30,11 +30,11 @@ total_movement = np.sqrt(dx**2 + dy**2).cumsum()
 fig, ax = plt.subplots(3, 2, figsize=(10, 3))
    
 t = (df["timestamp"] - df["timestamp"].iloc[0]) / 1e6
-ax[0][0].scatter(np.array(t), np.array(df["px"]), c = df["id"], cmap='tab20')
+ax[0][0].scatter(np.array(t), np.array(df["ux"]), c = df["id"], cmap='tab20')
 ax[0][0].set_xlabel("Time (s)")
 ax[0][0].set_ylabel("Pixel position in x (s)")
 
-ax[0][1].scatter(np.array(t), np.array(df["py"]), c = df["id"], cmap='tab20')
+ax[0][1].scatter(np.array(t), np.array(df["uy"]), c = df["id"], cmap='tab20')
 ax[0][1].set_xlabel("Time (s)")
 ax[0][1].set_ylabel("Pixel position in y (s)")
 
@@ -53,7 +53,10 @@ ax[1][1].set_xlabel("Pixel poistion X")
 ax[1][1].set_ylabel("Pixel position y")
 
 ax[2][0].scatter(np.array(t), np.array(total_movement), c = df["id"], cmap='tab20')
+ax[2][1].scatter(np.array(t), np.array(df["window_size"]), c = df["id"], cmap='tab20')
 
+ax[2][1].set_xlabel("Time(s)")
+ax[2][1].set_ylabel("Window size")
 
 # plt.xlabel("Time (s)")
 plt.show()

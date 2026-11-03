@@ -115,7 +115,7 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << feature.getFlow().x() << "," << feature.getFlow().y() << ","
         << activeFeatures << ","
         << feature.getEventCount() << ","
-        << (feature.hasConverged() ? "true" : "false")
+        << (feature.hasConverged() ? "true" : "false") << ","
         << feature.getWindowSize() << "," << "\n";
 
 }
@@ -156,7 +156,7 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 200;
+    const double epsilon = 5000;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;

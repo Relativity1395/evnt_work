@@ -9,7 +9,7 @@ typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
 
 
-const double r2 = 4.2426;
+const double r2 = 18;
 const int dim = 2;
 const int leaf = 10;
 class Feature{
@@ -72,7 +72,7 @@ class Feature{
         bool hasConverged() const;
         void setID(size_t newID) { id = newID; }
         size_t getID() const { return id; }
-        double getWindowSize() const { return Ti + dti;}
+        double getWindowSize() const { return dti;}
         void assignAlive(bool alive) {health = alive;}
         bool getHealth() const {return badHealth;}
     //3D projection
