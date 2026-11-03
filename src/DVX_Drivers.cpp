@@ -163,7 +163,7 @@ int main(void) {
 
     size_t nextFeatureID = 0;
     double lastLogTime = 0;
-    const double LOG_INTERVAL = 100000.0;
+    const double LOG_INTERVAL = 10.0;
     std::ofstream logFile("feature_status.csv");
 
     std::mutex logMutex;
