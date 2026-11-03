@@ -27,7 +27,6 @@ def update(frame):
 
     ax.set_title(f"Time: {(timestamp - frames[0][0]) / 1e6:.2f} s")
 
-    # Set interval based on time until next frame
     if frame < len(frames) - 1:
         next_timestamp = frames[frame + 1][0]
         dt = (next_timestamp - timestamp) / 1000  # microseconds to milliseconds
