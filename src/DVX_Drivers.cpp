@@ -382,7 +382,8 @@ int main(void) {
 
             // // Display camera output
             
-                        
+            cv::imshow("Features", canvas);  
+            cv::waitKey(1);           
 }
     
 
@@ -392,7 +393,7 @@ int main(void) {
     //         std::cout << "IRan";
     //         temp[i] = 1;
     //     }
-        `
+        
     // }
 
     // for (int i = 0; i < (int)temp.size(); i++){
