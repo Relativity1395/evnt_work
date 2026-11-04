@@ -45,29 +45,20 @@ void Feature::setEvents(){
     //swap keeps both buffer capacity, so the next window doesnt reallocate
     std::swap(previousEvents, currentEvents);
     currentEvents.clear();
+    bProp.clear();
 }
-void Feature::findEvents(const std::vector<Event>& E){
+void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
+    Eigen::Vector2d end = position + dti * flow;
+    double x0 = std::min(position.x(), end.x()) - xi, x1 = std::max(position.x(), end.x()) + xi;
+    double y0 = std::min(position.y(), end.y()) - xi, y1 = std::max(position.y(), end.y()) + xi;
 
-    for(const Event& event : E){
-
+    grid.forEachInBox(x0, y0, x1, y1, [&](int idx){
+        const Event& event = E[idx];
         double t = event.t();
-
-        // Only collect events inside the current time window
-        if (t < Ti || t >= Ti + dti){
-            continue;
-        }
-
-        Eigen::Vector2d x = event.pos();
-        double tbar = (t - Ti);
-
-        Eigen::Vector2d backProp = x - tbar * flow;
-
-        if ((backProp - position).norm() <= xi){
-
-            currentEvents.push_back(event);
-            bProp.push_back(backProp);
-        }
-    }
+        if (t < Ti || t >= Ti + dti) return;
+        Eigen::Vector2d backProp = event.pos() - (t - Ti) * flow;
+        if ((backProp - position).norm() <= xi) currentEvents.push_back(event);
+    });
 }
 // void Feature::findEvents(const std::vector<Event>& E){
     
@@ -88,20 +79,14 @@ void Feature::findEvents(const std::vector<Event>& E){
 //     }
 
 
-    bool Feature::findEventsInit(const std::vector<Event>& E){
-    for (const Event& event : E){
-        if (event.t() < Ti){
-        continue;
-        }
-        Eigen::Vector2d x = event.pos();
-        double tbar = (event.t() - Ti);
-        Eigen::Vector2d backProp = x - tbar * flow;
-        if ((backProp - position).norm() < xi){
-            currentEvents.push_back(event);
-            bProp.push_back(backProp);
-            if (currentEvents.size() >= 250) break;
-        }
-    }
+    bool Feature::findEventsInit(const EventGrid& grid, const std::vector<Event>& E){
+    grid.forEachInBox(position.x() - xi, position.y() - xi, position.x() + xi, position.y() + xi, [&](int idx){
+        if (currentEvents.size() >= 250) return;
+        const Event& event = E[idx];
+        if (event.t() < Ti) return;
+        Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
+        if ((backProp - position).norm() < xi) currentEvents.push_back(event);
+    });
     return checkInitWindow();
 }
 // bool Feature::findEventsInit(const std::vector<Event>& E){
@@ -132,7 +117,9 @@ bool Feature::updateTimeWindow(double highestTimestamp){
             return false;
         }
 
-        dti = currentEvents.back().t() - Ti;
+        double tMax = std::max_element(currentEvents.begin(), currentEvents.end(),
+        [](const Event& a, const Event& b){ return a.t() < b.t(); })->t();
+        dti = tMax - Ti;
 
         if (dti <= 0){
             return false;
@@ -166,6 +153,15 @@ bool Feature::updateTimeWindow(double highestTimestamp){
     }
 
     return false;
+}
+
+void Feature::subsampleEvents(size_t maxN){
+    if (currentEvents.size() <= maxN) return;
+    double step = (double)currentEvents.size() / maxN;
+    std::vector<Event> kept;
+    kept.reserve(maxN);
+    for (size_t k = 0; k < maxN; k++) kept.push_back(currentEvents[(size_t)(k * step)]);
+    currentEvents.swap(kept);
 }
 
 // bool Feature::updateTimeWindow(double highestTimestamp){
@@ -209,23 +205,23 @@ void Feature::updateBackPropagation(){
     }
 }
 void Feature::generateKD(my_kd_tree_t& tree){
-    weights.clear();
-    weights.resize(bProp.size());      // one entry per current event, always aligned
+    weights.resize(bProp.size());
+    for (auto& w : weights) w.clear();         
+    if (landmark.empty()) return;
 
-    if (landmark.empty()) return;      // no landmarks yet: all weight lists stay empty
+    Matches matches;
+    nanoflann::SearchParameters params;
+    params.sorted = false;
+
     for (size_t i = 0; i < bProp.size(); i++){
-        Matches matches;
-        tree.index->radiusSearch(bProp[i].data(), r2, matches);
-
+        tree.index->radiusSearch(bProp[i].data(), r2, matches, params);
         double sum = 0.0;
         for (const auto& m : matches){
             double score = std::exp(-m.second / 4.0);
             weights[i].push_back({m.first, score});
             sum += score;
         }
-        if (sum > 0.0){
-            for (auto& a : weights[i]) a.weight /= sum;
-        }
+        if (sum > 0.0) for (auto& a : weights[i]) a.weight /= sum;
     }
 }
 // void Feature::generateKD(){
@@ -329,24 +325,15 @@ int Feature::getDeadCycles() const {
 
 double Feature::calculateCost() {
     cost = 0.0;
-
-    for(std::size_t k = 0; k < currentEvents.size(); ++k){
-        Eigen::Vector2d xk = currentEvents[k].pos();
-        
-        double tbar = (currentEvents[k].t() - Ti);
-        for(const Association& association : weights[k]){
-            double rkj = association.weight;
-            std::size_t j = association.landmarkIndex;
-            Eigen::Vector2d currLandmark = landmark[j];
-            Eigen::Vector2d mag = (xk - tbar * flow) - currLandmark;
-
-            // std::cout << "backpropogated: " << (xk - tbar * flow) << std::endl;
-            // std::cout << "normal: " << (xk) << std::endl;
-            cost += rkj * mag.squaredNorm();
-            
-        }
+    size_t matched = 0;
+    for (size_t k = 0; k < currentEvents.size(); ++k){
+        if (weights[k].empty()) continue;
+        matched++;
+        Eigen::Vector2d bp = currentEvents[k].pos() - (currentEvents[k].t() - Ti) * flow;
+        for (const Association& a : weights[k])
+            cost += a.weight * (bp - landmark[a.landmarkIndex]).squaredNorm();
     }
-            
+    cost = matched ? cost / matched : std::numeric_limits<double>::infinity();
     return cost;
 }
 

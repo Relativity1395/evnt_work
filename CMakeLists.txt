@@ -9,6 +9,11 @@ set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_BUILD_TYPE Debug)
+
+set(CMAKE_BUILD_TYPE Release)
+find_package(OpenMP REQUIRED)
+
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address -Wall -Wextra")
 find_path(LIBCAER_INCLUDE_DIR NAMES libcaer/libcaer.h
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/include)
@@ -18,7 +23,7 @@ find_library(LIBCAER_LIB NAMES caer
 find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
-# evio_core algorithm itself
+# evio_core algorithm 
 add_library(evio_core STATIC
   # src/RawAdapter.cpp
   src/Feature.cpp
@@ -59,6 +64,9 @@ target_link_libraries(dvxplore_simple PRIVATE
   rt
   ${OpenCV_LIBS}
 )
+
+target_link_libraries(dvxplore_simple PRIVATE OpenMP::OpenMP_CXX)
+target_compile_options(dvxplore_simple PRIVATE -march=native)
 
 # unit tests
 # add_executable(test_feature

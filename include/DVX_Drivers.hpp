@@ -1,5 +1,6 @@
 
 #include <libcaer/libcaer.h>
+#include <libcaer/filters/dvs_noise.h>
 #include <libcaer/devices/dvxplorer.h>
 #include <libcaer/events/polarity.h>
 #include <libcaer/events/imu6.h>

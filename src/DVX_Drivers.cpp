@@ -15,24 +15,14 @@ static void usbShutdownHandler(void *ptr) {
     globalShutdown.store(true);
 }
 
-Event get_event(caerPolarityEventPacket polarity, int j) {
-    Event evnt;
-
+bool get_event(caerPolarityEventPacket polarity, int j, Event& evnt) {
     caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
-
-    if (!caerPolarityEventIsValid(evt)) {
-        exit(EXIT_FAILURE);
-    }
-    //X and Y already come back as uint16_t, the same type PixelCoord stores, 
+    if (!caerPolarityEventIsValid(evt)) return false;
     evnt.position << caerPolarityEventGetX(evt), caerPolarityEventGetY(evt);
-    evnt.polarity = caerPolarityEventGetPolarity(evt);
-    // time stamp 64 is int64 microsecons; event keep uint32 (matches event_t)
-    //which wraps after 71.6 minutes of camera uptime. So we use the 64 bit version to avoid wrap around issues.
+    evnt.polarity  = caerPolarityEventGetPolarity(evt);
     evnt.timestamp = static_cast<uint32_t>(caerPolarityEventGetTimestamp64(evt, polarity));
-
-    return evnt;
+    return true;
 }
-
 
 ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
     ImuSample sample;
@@ -51,48 +41,48 @@ ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
 }
 
 
-RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
-    RawData data;
-    caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
+// RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
+//     RawData data;
+//     caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
 
-    if (packetContainer == NULL) {
-        return data;
-    }
+//     if (packetContainer == NULL) {
+//         return data;
+//     }
 
-    int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+//     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
 
-    for (int32_t i = 0; i < packetNum; i++) {
-        caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
+//     for (int32_t i = 0; i < packetNum; i++) {
+//         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
 
-        if (packetHeader == NULL) {
-            continue;
-        }
+//         if (packetHeader == NULL) {
+//             continue;
+//         }
 
-        int eventType = caerEventPacketHeaderGetEventType(packetHeader);
+//         int eventType = caerEventPacketHeaderGetEventType(packetHeader);
 
-        if (eventType == POLARITY_EVENT) {
-            caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-            int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+//         if (eventType == POLARITY_EVENT) {
+//             caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+//             int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
 
-            for (int32_t j = 0; j < eventNum; j++) {
-                data.events.push_back(get_event(polarity, j));
-            }
-        }
+//             for (int32_t j = 0; j < eventNum; j++) {
+//                 data.events.push_back(get_event(polarity, j));
+//             }
+//         }
 
-        else if (eventType == IMU6_EVENT) {
-            caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
-            int32_t imuNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+//         else if (eventType == IMU6_EVENT) {
+//             caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
+//             int32_t imuNum = caerEventPacketHeaderGetEventNumber(packetHeader);
 
-            for (int32_t j = 0; j < imuNum; j++) {
-                data.imu_samples.push_back(get_imu_sample(imuPacket, j));
-            }
-        }
-    }
+//             for (int32_t j = 0; j < imuNum; j++) {
+//                 data.imu_samples.push_back(get_imu_sample(imuPacket, j));
+//             }
+//         }
+//     }
 
-    caerEventPacketContainerFree(packetContainer);
+//     caerEventPacketContainerFree(packetContainer);
 
-    return data;
-}
+//     return data;
+// }
 
 
 void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double timestamp, size_t activeFeatures, int status) {
@@ -140,6 +130,13 @@ int main(void) {
     if (dvxplr_hndl == NULL) return EXIT_FAILURE;
 
     struct caer_dvx_info dvxplr_info = caerDVXplorerInfoGet(dvxplr_hndl);
+    caerFilterDVSNoise noiseFilter = caerFilterDVSNoiseInitialize(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
+    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE, true);
+    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME, 2000);  // µs
+    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE, true);
+    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_REFRACTORY_PERIOD_TIME, 100);     // µs
+
+    EventGrid grid(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
     printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n",
            dvxplr_info.deviceString, dvxplr_info.deviceID,
            dvxplr_info.deviceIsMaster, dvxplr_info.dvsSizeX,
@@ -242,24 +239,14 @@ int main(void) {
     
                 if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
                     caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+                    // caerFilterDVSNoiseApply(noiseFilter, polarity);
                     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
-                    tempFeatures.clear();
                     for (int32_t j = 0; j < eventNum; j++) {
-                        
-                        
-                        currEvents.push_back(get_event(polarity, j));
-                        const Event& ev = currEvents.back();
-
-                        // cv::circle(
-                        //     canvas,
-                        //     cv::Point(ev.position.x(), ev.position.y()),
-                        //     1,
-                        //     cv::Scalar(0, 0, 0),
-                        //     -1
-                        // );
-                        if (currEvents.back().timestamp > highestTimestamp){
-                            highestTimestamp = currEvents.back().timestamp;
-                        }
+                        Event e;
+                        if (!get_event(polarity, j, e)) continue;
+                        currEvents.push_back(e);
+                        // ... rest of your existing loop unchanged
+                    }
                         bool feature = detector.isFeature(currEvents.back());
                         batchEvents++;
                         if (feature) batchCorners++;
@@ -307,7 +294,7 @@ int main(void) {
                         // }
                     }    
                 }
-            }
+            
             
             // std::cout << "Features detected: " << currFeatures.size() << '\n';
             // std::cout << "Batch events: " << batchEvents
@@ -317,15 +304,12 @@ int main(void) {
 
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
-            #pragma omp parallel for
-            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                //std::cout << "Calling FeatureCollection\n";
-                
-                int result = FeatureCollection(
-                    currFeatures[i], currEvents, epsilon, highestTimestamp
-                );
-            }
+            grid.build(currEvents);
 
+            // #pragma omp parallel for schedule(dynamic, 1)
+            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+                FeatureCollection(currFeatures[i], grid, currEvents, highestTimestamp);
+            }
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 if (shouldLog || currFeatures[i].getHealth() == DEAD) {
@@ -382,10 +366,15 @@ int main(void) {
 
             // // Display camera output
             
-            cv::imshow("Features", canvas);  
-            cv::waitKey(1);           
-}
-    
+            auto now = std::chrono::steady_clock::now();
+            if (now - lastDraw >= std::chrono::milliseconds(33)) {
+                cv::imshow("Features", canvas);
+                cv::waitKey(1);
+                canvas.setTo(cv::Scalar(128, 128, 128));
+                lastDraw = now;
+            }          
+            
+        }     
 
     // std::vector<int> temp;
     // for (int i = 0; i < (int)currFeatures.size(); i++){
@@ -411,4 +400,5 @@ int main(void) {
     // cv::destroyAllWindows();
     printf("Shutdown successful.\n");
     return EXIT_SUCCESS;
+
 }
