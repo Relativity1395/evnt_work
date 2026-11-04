@@ -153,18 +153,17 @@ int main(void) {
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
-    const double epsilon = 5000;
+    const double epsilon = 500;
     const double minFeatureDist = 5.0;
     // before the while loop
     size_t detCount = 0, evCount = 0;
 
     size_t nextFeatureID = 0;
     double lastLogTime = 0;
-    const double LOG_INTERVAL = 10.0;
+    const double LOG_INTERVAL = 1000000;
     std::ofstream logFile("feature_status.csv");
 
-    std::mutex logMutex;
-    std::lock_guard<std::mutex> lock(logMutex);
+  
 
     logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size, iters\n" << "\n";
 
@@ -238,61 +237,39 @@ int main(void) {
                     
     
                 if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
-                    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-                    // caerFilterDVSNoiseApply(noiseFilter, polarity);
-                    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
-                    for (int32_t j = 0; j < eventNum; j++) {
-                        Event e;
-                        if (!get_event(polarity, j, e)) continue;
-                        currEvents.push_back(e);
-                        // ... rest of your existing loop unchanged
-                    }
-                        bool feature = detector.isFeature(currEvents.back());
-                        batchEvents++;
-                        if (feature) batchCorners++;
-                        // right after: bool feature = detector.isFeature(currEvents.back());
-                        evCount++;
-                        if (feature) detCount++;
-                        //test push main
-                        if (feature == true){
-                        
-                            const Event &ev = currEvents.back();
-                            bool isNew = true;
-                            for (Feature& f : currFeatures) {
-                                if ((ev.position.cast<double>() - f.getPosition().cast<double>()).norm() < minFeatureDist) {
-                                    isNew = false;
-                                    break;
-                                }
-                            }
-                            if (isNew && currFeatures.size() < MAXFEAT) {
-                                currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
-                                                        std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
-                                currFeatures.back().setID(nextFeatureID++);
-                            }
-                            // for (int i = 0; i < (int)currFeatures.size(); i++){
-                            //     if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
-                            //         if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
-                            //             Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
-                            //             currFeatures.push_back(Feature);
-                            //             break;
-                            //         }
-                            //         continue;
+    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+    caerFilterDVSNoiseApply(noiseFilter, polarity);
+    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
 
-                            //     }
-                            //     break;
-                            // }
-                            
-                            
-                            cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
-                            // std::cout<< "feature position x: " << evnt.x << std::endl;
-                            // std::cout<< "feature position y: " << evnt.y << std::endl;
-                        }
-                        // else if (evnt.p == 1){
-                        // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
-                        // }else{
-                        //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
-                        // }
-                    }    
+    for (int32_t j = 0; j < eventNum; j++) {
+        Event e;
+        if (!get_event(polarity, j, e)) continue;   // skips events the noise filter removed
+        currEvents.push_back(e);
+        Event& ev = currEvents.back();
+
+        if (ev.timestamp > highestTimestamp) highestTimestamp = ev.timestamp;
+
+        bool feature = detector.isFeature(ev);
+        batchEvents++;
+        evCount++;
+        if (!feature) continue;
+        batchCorners++;
+        detCount++;
+
+        bool isNew = true;
+        for (const Feature& f : currFeatures) {
+            if ((ev.pos() - f.getPosition()).norm() < minFeatureDist) { isNew = false; break; }
+        }
+        if (isNew && currFeatures.size() < MAXFEAT) {
+            currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
+                                      std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
+            currFeatures.back().setID(nextFeatureID++);
+        }
+
+        cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()),
+                   radius, cv::Scalar(255, 255, 255), thickness);
+    }
+}
                 }
             
             
@@ -308,7 +285,7 @@ int main(void) {
 
             #pragma omp parallel for schedule(dynamic, 1)
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                FeatureCollection(currFeatures[i], grid, currEvents, highestTimestamp);
+                FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
             }
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
@@ -316,7 +293,7 @@ int main(void) {
                     logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
-                // std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
+                std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
                 if (currFeatures[i].getHealth() == DEAD) {
 
                     std::cout << "feature died" << std::endl;
@@ -396,6 +373,7 @@ int main(void) {
 
 
     caerDeviceDataStop(dvxplr_hndl);
+    caerFilterDVSNoiseDestroy(noiseFilter);
     caerDeviceClose(&dvxplr_hndl);
     // cv::destroyAllWindows();
     printf("Shutdown successful.\n");

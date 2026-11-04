@@ -10,4 +10,4 @@ enum FeatureState {
     HEALTHY = 2
 };
 void checkInitFeature(Event& e);
-int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, double highestTimestamp);
+int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, const double epsilon, double highestTimestamp);

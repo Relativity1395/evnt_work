@@ -3,9 +3,9 @@
 #define MAXITR 50
 
 constexpr double FLOW_TOL_PX = 0.05;  
-constexpr double COST_TOL    = 2.0;   
+// constexpr double COST_TOL    = epsilo;   
 
-int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, double highestTimestamp){
+int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, const double epsilon, double highestTimestamp){
     if (!F.checkWindow()){
         if (!F.findEventsInit(grid, currEvents)){
             F.assignAlive(INIT);
@@ -28,10 +28,10 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
                 F.generateKD(mat_index);
                 newFlow = F.updateFlow();
                 iter++;
-            } while ((newFlow - previousFlow).norm() * F.getDti() > FLOW_TOL_PX && iter < MAXITR);
+            } while (cost > epsilon && iter < MAXITR);
 
             // F.setIters(iter);
-            F.setConverged(F.calculateCost() <= COST_TOL);
+            F.setConverged(F.calculateCost() <= epsilon);
 
             if (F.checkHealth() > 3){
                 F.assignAlive(DEAD);
