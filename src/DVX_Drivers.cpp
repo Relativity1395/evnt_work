@@ -306,7 +306,7 @@ int main(void) {
 
             grid.build(currEvents);
 
-            // #pragma omp parallel for schedule(dynamic, 1)
+            #pragma omp parallel for schedule(dynamic, 1)
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 FeatureCollection(currFeatures[i], grid, currEvents, highestTimestamp);
             }
