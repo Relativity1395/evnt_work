@@ -28,7 +28,7 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
                 F.generateKD(mat_index);
                 newFlow = F.updateFlow();
                 iter++;
-            } while (cost > epsilon && iter < MAXITR);
+            } while (F.calculateCost() > epsilon && iter < MAXITR);
 
             // F.setIters(iter);
             F.setConverged(F.calculateCost() <= epsilon);
