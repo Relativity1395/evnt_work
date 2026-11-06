@@ -106,7 +106,9 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << activeFeatures << ","
         << feature.getEventCount() << ","
         << (feature.hasConverged() ? "true" : "false") << ","
-        << feature.getWindowSize() << "," << "\n";
+        << feature.getWindowSize() << "," 
+        << feature.getIters() << "\n";
+
 
 }
 int main(void) {
@@ -293,10 +295,12 @@ int main(void) {
                     logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
-                std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
-                if (currFeatures[i].getHealth() == DEAD) {
+                if (currFeatures[i].getFlow().norm() > 1e-4){
+                    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
+                }
+                    if (currFeatures[i].getHealth() == DEAD) {
 
-                    std::cout << "feature died" << std::endl;
+                    // std::cout << "feature died" << std::endl;
                     currFeatures.erase(currFeatures.begin() + i);
                     i--;
                     continue;

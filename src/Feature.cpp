@@ -125,9 +125,9 @@ bool Feature::updateTimeWindow(double highestTimestamp){
             return false;
         }
 
-        // if (dti > MAXDELT){
-        //     dti = MAXDELT;
-        // }
+        if (dti > MAXDELT){
+            dti = MAXDELT;
+        }
         Ti += dti;
         return true;
     }
@@ -353,7 +353,7 @@ Eigen::Vector2d Feature::updateFlow(){
                 std::size_t j = association.landmarkIndex;
                 Eigen::Vector2d currLandmark = landmark[j];
                 numerator += rkj*(xk - currLandmark) * tbar;
-                denominator += rkj * std::pow(tbar, 2);
+                denominator += rkj * tbar*tbar;
             }
         }
         

@@ -1,0 +1,855 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fdf88f0..4ddd06a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,12 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -Wall -Wextra")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra")
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+-set (CMAKE_BUILD_TYPE Debug)
+-
+-set(CMAKE_BUILD_TYPE Release)
+-find_package(OpenMP REQUIRED)
+-
+-
++set(CMAKE_BUILD_TYPE Release) # defines NDEBUG: turns off Eigen bounds/size asserts
+ # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address -Wall -Wextra")
+ find_path(LIBCAER_INCLUDE_DIR NAMES libcaer/libcaer.h
+   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/include)
+@@ -21,9 +16,10 @@ find_library(LIBCAER_LIB NAMES caer
+   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/lib)
+ 
+ find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
++find_package(OpenMP REQUIRED)
+ find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
+ 
+-# evio_core algorithm 
++# evio_core algorithm itself
+ add_library(evio_core STATIC
+   # src/RawAdapter.cpp
+   src/Feature.cpp
+@@ -63,13 +59,14 @@ target_link_libraries(dvxplore_simple PRIVATE
+   pthread
+   rt
+   ${OpenCV_LIBS}
++  OpenMP::OpenMP_CXX # without this the "#pragma omp parallel for" is silently ignored
+ )
+ 
+-target_link_libraries(dvxplore_simple PRIVATE OpenMP::OpenMP_CXX)
+-target_compile_options(dvxplore_simple PRIVATE -march=native)
+-
+ # unit tests
+ # add_executable(test_feature
+ #   unit_tests/test_feature.cpp
+ # )
+-# target_link_libraries(test_feature PRIVATE evio_core)
+\ No newline at end of file
++# target_link_libraries(test_feature PRIVATE evio_core)
++
++add_executable(test_em_convergence unit_tests/test_em_convergence.cpp)
++target_link_libraries(test_em_convergence PRIVATE evio_core)
+diff --git a/include/DVX_Drivers.hpp b/include/DVX_Drivers.hpp
+index e19459d..2876fd9 100644
+--- a/include/DVX_Drivers.hpp
++++ b/include/DVX_Drivers.hpp
+@@ -1,6 +1,5 @@
+ 
+ #include <libcaer/libcaer.h>
+-#include <libcaer/filters/dvs_noise.h>
+ #include <libcaer/devices/dvxplorer.h>
+ #include <libcaer/events/polarity.h>
+ #include <libcaer/events/imu6.h>
+@@ -23,9 +22,7 @@
+ #define DVX_DRIVERS_H
+ #define WIDTH 640
+ #define HEIGHT 480
+-#define MAXFEAT 20
+-
+-
++#define MAXFEAT 10
+ 
+ // uint16_t **sae = (uint16_t**)malloc((WIDTH*HEIGHT)*sizeof(uint16_t*));
+ 
+diff --git a/include/Feature.hpp b/include/Feature.hpp
+index bdd8eb9..442e85b 100644
+--- a/include/Feature.hpp
++++ b/include/Feature.hpp
+@@ -9,37 +9,9 @@ typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my
+ using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
+ 
+ 
+-const double r2 = 18;
++const double r2 = 18; // nanoflann radiusSearch takes the SQUARED radius: (3*sqrt(2) px)^2
+ const int dim = 2;
+ const int leaf = 10;
+-constexpr size_t MAX_WINDOW_EVENTS = 400;
+-
+-struct EventGrid {
+-    static constexpr int CELL = 16;
+-    int cols, rows;
+-    std::vector<std::vector<int>> cells;   // indices into currEvents
+-
+-    EventGrid(int w, int h)
+-        : cols((w + CELL - 1) / CELL), rows((h + CELL - 1) / CELL), cells(cols * rows) {}
+-
+-    void build(const std::vector<Event>& E) {
+-        for (auto& c : cells) c.clear();   // keeps capacity between batches
+-        for (int i = 0; i < (int)E.size(); i++) {
+-            int cx = E[i].position.x() / CELL, cy = E[i].position.y() / CELL;
+-            if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) cells[cy * cols + cx].push_back(i);
+-        }
+-    }
+-
+-    template <class Fn>
+-    void forEachInBox(double x0, double y0, double x1, double y1, Fn&& fn) const {
+-        int cx0 = std::max(0, (int)std::floor(x0 / CELL)), cy0 = std::max(0, (int)std::floor(y0 / CELL));
+-        int cx1 = std::min(cols - 1, (int)std::floor(x1 / CELL)), cy1 = std::min(rows - 1, (int)std::floor(y1 / CELL));
+-        for (int cy = cy0; cy <= cy1; cy++)
+-            for (int cx = cx0; cx <= cx1; cx++)
+-                for (int idx : cells[cy * cols + cx]) fn(idx);
+-    }
+-};
+-
+ class Feature{
+ 
+ 
+@@ -60,6 +32,7 @@ class Feature{
+         bool converged = false;
+         int deadCycles = 0;
+         size_t id;
++        int iters = 0;
+         bool health = false;
+ 
+     public:
+@@ -82,10 +55,9 @@ class Feature{
+         void propagatePreviousEvents();
+         const std::vector<Eigen::Vector2d>& getLandmark() const;
+         void setEvents();
+-        void findEvents(const EventGrid& grid, const std::vector<Event>& E);
+-        bool findEventsInit(const EventGrid& grid, const std::vector<Event>& E);
++        void findEvents(const std::vector<Event>& E);
++        bool findEventsInit(const std::vector<Event>& E);
+         bool updateTimeWindow(double highestTimestamp);
+-        void subsampleEvents(size_t maxN);
+         void generateKD(my_kd_tree_t& tree);
+         double getCost() const {return cost;}
+         Eigen::Vector2d getPosition() const;
+@@ -101,6 +73,8 @@ class Feature{
+         bool hasConverged() const;
+         void setID(size_t newID) { id = newID; }
+         size_t getID() const { return id; }
++        void setIters(int n) { iters = n; }
++        int getIters() const { return iters; }
+         double getWindowSize() const { return dti;}
+         void assignAlive(bool alive) {health = alive;}
+         bool getHealth() const {return badHealth;}
+diff --git a/include/OpticalFlow.hpp b/include/OpticalFlow.hpp
+index 45cbcec..fb8499a 100644
+--- a/include/OpticalFlow.hpp
++++ b/include/OpticalFlow.hpp
+@@ -10,4 +10,4 @@ enum FeatureState {
+     HEALTHY = 2
+ };
+ void checkInitFeature(Event& e);
+-int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, const double epsilon, double highestTimestamp);
+\ No newline at end of file
++int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp);
+\ No newline at end of file
+diff --git a/src/DVX_Drivers.cpp b/src/DVX_Drivers.cpp
+index 7501800..89dc83a 100644
+--- a/src/DVX_Drivers.cpp
++++ b/src/DVX_Drivers.cpp
+@@ -15,15 +15,25 @@ static void usbShutdownHandler(void *ptr) {
+     globalShutdown.store(true);
+ }
+ 
+-bool get_event(caerPolarityEventPacket polarity, int j, Event& evnt) {
++Event get_event(caerPolarityEventPacket polarity, int j) {
++    Event evnt;
++
+     caerPolarityEvent evt = caerPolarityEventPacketGetEvent(polarity, j);
+-    if (!caerPolarityEventIsValid(evt)) return false;
++
++    if (!caerPolarityEventIsValid(evt)) {
++        exit(EXIT_FAILURE);
++    }
++    //X and Y already come back as uint16_t, the same type PixelCoord stores, 
+     evnt.position << caerPolarityEventGetX(evt), caerPolarityEventGetY(evt);
+-    evnt.polarity  = caerPolarityEventGetPolarity(evt);
++    evnt.polarity = caerPolarityEventGetPolarity(evt);
++    // time stamp 64 is int64 microsecons; event keep uint32 (matches event_t)
++    //which wraps after 71.6 minutes of camera uptime. So we use the 64 bit version to avoid wrap around issues.
+     evnt.timestamp = static_cast<uint32_t>(caerPolarityEventGetTimestamp64(evt, polarity));
+-    return true;
++
++    return evnt;
+ }
+ 
++
+ ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
+     ImuSample sample;
+ 
+@@ -41,48 +51,48 @@ ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
+ }
+ 
+ 
+-// RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
+-//     RawData data;
+-//     caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
++RawData get_raw_data(caerDeviceHandle dvxplr_hndl) {
++    RawData data;
++    caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
+ 
+-//     if (packetContainer == NULL) {
+-//         return data;
+-//     }
++    if (packetContainer == NULL) {
++        return data;
++    }
+ 
+-//     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
++    int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+ 
+-//     for (int32_t i = 0; i < packetNum; i++) {
+-//         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
++    for (int32_t i = 0; i < packetNum; i++) {
++        caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
+ 
+-//         if (packetHeader == NULL) {
+-//             continue;
+-//         }
++        if (packetHeader == NULL) {
++            continue;
++        }
+ 
+-//         int eventType = caerEventPacketHeaderGetEventType(packetHeader);
++        int eventType = caerEventPacketHeaderGetEventType(packetHeader);
+ 
+-//         if (eventType == POLARITY_EVENT) {
+-//             caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+-//             int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
++        if (eventType == POLARITY_EVENT) {
++            caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
++            int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+ 
+-//             for (int32_t j = 0; j < eventNum; j++) {
+-//                 data.events.push_back(get_event(polarity, j));
+-//             }
+-//         }
++            for (int32_t j = 0; j < eventNum; j++) {
++                data.events.push_back(get_event(polarity, j));
++            }
++        }
+ 
+-//         else if (eventType == IMU6_EVENT) {
+-//             caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
+-//             int32_t imuNum = caerEventPacketHeaderGetEventNumber(packetHeader);
++        else if (eventType == IMU6_EVENT) {
++            caerIMU6EventPacket imuPacket = (caerIMU6EventPacket) packetHeader;
++            int32_t imuNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+ 
+-//             for (int32_t j = 0; j < imuNum; j++) {
+-//                 data.imu_samples.push_back(get_imu_sample(imuPacket, j));
+-//             }
+-//         }
+-//     }
++            for (int32_t j = 0; j < imuNum; j++) {
++                data.imu_samples.push_back(get_imu_sample(imuPacket, j));
++            }
++        }
++    }
+ 
+-//     caerEventPacketContainerFree(packetContainer);
++    caerEventPacketContainerFree(packetContainer);
+ 
+-//     return data;
+-// }
++    return data;
++}
+ 
+ 
+ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double timestamp, size_t activeFeatures, int status) {
+@@ -106,7 +116,8 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
+         << activeFeatures << ","
+         << feature.getEventCount() << ","
+         << (feature.hasConverged() ? "true" : "false") << ","
+-        << feature.getWindowSize() << "," << "\n";
++        << feature.getWindowSize() << ","
++        << feature.getIters() << "\n";
+ 
+ }
+ int main(void) {
+@@ -130,13 +141,6 @@ int main(void) {
+     if (dvxplr_hndl == NULL) return EXIT_FAILURE;
+ 
+     struct caer_dvx_info dvxplr_info = caerDVXplorerInfoGet(dvxplr_hndl);
+-    caerFilterDVSNoise noiseFilter = caerFilterDVSNoiseInitialize(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
+-    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE, true);
+-    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME, 2000);  // µs
+-    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE, true);
+-    caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_REFRACTORY_PERIOD_TIME, 100);     // µs
+-
+-    EventGrid grid(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
+     printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n",
+            dvxplr_info.deviceString, dvxplr_info.deviceID,
+            dvxplr_info.deviceIsMaster, dvxplr_info.dvsSizeX,
+@@ -153,19 +157,17 @@ int main(void) {
+     std::vector<Feature> currFeatures;
+     std::vector<Feature> tempFeatures;
+     corner_event_detector::FastDetector detector;
+-    const double epsilon = 5;
++    const double epsilon = 1e-3; // EM stops when cost changes by less than 0.1% between iterations
+     const double minFeatureDist = 5.0;
+     // before the while loop
+     size_t detCount = 0, evCount = 0;
+ 
+     size_t nextFeatureID = 0;
+     double lastLogTime = 0;
+-    const double LOG_INTERVAL = 1000000;
++    const double LOG_INTERVAL = 10.0;
+     std::ofstream logFile("feature_status.csv");
+ 
+-  
+-
+-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size, iters\n" << "\n";
++    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters\n";
+ 
+     if (!logFile.is_open()) {
+         std::cerr << "Failed to open feature log file!\n";
+@@ -176,7 +178,6 @@ int main(void) {
+     while (!globalShutdown.load(std::memory_order_relaxed)) {
+             int batchEvents = 0;
+             int batchCorners = 0;
+-            canvas.setTo(cv::Scalar(128, 128, 128));
+             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
+             if (packetContainer == NULL) {
+                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
+@@ -237,41 +238,73 @@ int main(void) {
+                     
+     
+                 if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
+-    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+-    caerFilterDVSNoiseApply(noiseFilter, polarity);
+-    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+-
+-    for (int32_t j = 0; j < eventNum; j++) {
+-        Event e;
+-        if (!get_event(polarity, j, e)) continue;   // skips events the noise filter removed
+-        currEvents.push_back(e);
+-        Event& ev = currEvents.back();
+-
+-        if (ev.timestamp > highestTimestamp) highestTimestamp = ev.timestamp;
+-
+-        bool feature = detector.isFeature(ev);
+-        batchEvents++;
+-        evCount++;
+-        if (!feature) continue;
+-        batchCorners++;
+-        detCount++;
+-
+-        bool isNew = true;
+-        for (const Feature& f : currFeatures) {
+-            if ((ev.pos() - f.getPosition()).norm() < minFeatureDist) { isNew = false; break; }
+-        }
+-        if (isNew && currFeatures.size() < MAXFEAT) {
+-            currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
+-                                      std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
+-            currFeatures.back().setID(nextFeatureID++);
+-        }
+-
+-        cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()),
+-                   radius, cv::Scalar(255, 255, 255), thickness);
+-    }
+-}
++                    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
++                    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
++                    tempFeatures.clear();
++                    for (int32_t j = 0; j < eventNum; j++) {
++                        // skip invalid events here; get_event() would exit() the whole program
++                        if (!caerPolarityEventIsValid(caerPolarityEventPacketGetEvent(polarity, j))) continue;
++                        currEvents.push_back(get_event(polarity, j));
++                        const Event& ev = currEvents.back();
++
++                        // cv::circle(
++                        //     canvas,
++                        //     cv::Point(ev.position.x(), ev.position.y()),
++                        //     1,
++                        //     cv::Scalar(0, 0, 0),
++                        //     -1
++                        // );
++                        if (currEvents.back().timestamp > highestTimestamp){
++                            highestTimestamp = currEvents.back().timestamp;
++                        }
++                        bool feature = detector.isFeature(currEvents.back());
++                        batchEvents++;
++                        if (feature) batchCorners++;
++                        // right after: bool feature = detector.isFeature(currEvents.back());
++                        evCount++;
++                        if (feature) detCount++;
++                        //test push main
++                        if (feature == true){
++                        
++                            const Event &ev = currEvents.back();
++                            bool isNew = true;
++                            for (Feature& f : currFeatures) {
++                                if ((ev.position.cast<double>() - f.getPosition().cast<double>()).norm() < minFeatureDist) {
++                                    isNew = false;
++                                    break;
++                                }
++                            }
++                            if (isNew && currFeatures.size() < MAXFEAT) {
++                                currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
++                                                        std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
++                                currFeatures.back().setID(nextFeatureID++);
++                            }
++                            // for (int i = 0; i < (int)currFeatures.size(); i++){
++                            //     if (currEvents.back().position.norm() >= currFeatures[i].getPosition().norm() + 1){
++                            //         if ((i == ((int)currFeatures.size() - 1)) && currFeatures.size() < MAXFEAT){
++                            //             Feature Feature(currEvents.back().pos(), currEvents.back().t(), 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
++                            //             currFeatures.push_back(Feature);
++                            //             break;
++                            //         }
++                            //         continue;
++
++                            //     }
++                            //     break;
++                            // }
++                            
++                            
++                            cv::circle(canvas, cv::Point(currEvents.back().position.x(), currEvents.back().position.y()), radius, cv::Scalar(255, 255, 255), thickness);
++                            // std::cout<< "feature position x: " << evnt.x << std::endl;
++                            // std::cout<< "feature position y: " << evnt.y << std::endl;
++                        }
++                        // else if (evnt.p == 1){
++                        // cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(255, 255, 255), thickness);
++                        // }else{
++                        //     cv::circle(canvas, cv::Point(evnt.x, evnt.y), radius, cv::Scalar(0, 0, 0), thickness);
++                        // }
++                    }    
+                 }
+-            
++            }
+             
+             // std::cout << "Features detected: " << currFeatures.size() << '\n';
+             // std::cout << "Batch events: " << batchEvents
+@@ -281,46 +314,28 @@ int main(void) {
+ 
+             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
+ 
+-            grid.build(currEvents);
+-
+-            #pragma omp parallel for schedule(dynamic, 1)
++            // keep each feature's return code: getHealth() is a bool, so comparing it to DEAD (=1)
++            // erased features after ONE bad window and the deadCycles > 3 grace period never ran
++            std::vector<int> status(currFeatures.size());
++            #pragma omp parallel for
+             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+-                FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
++                status[i] = FeatureCollection(currFeatures[i], currEvents, epsilon, highestTimestamp);
+             }
+-                //std::cout << "FeatureCollection returned: " << result << '\n';
+-            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+-                if (shouldLog || currFeatures[i].getHealth() == DEAD) {
+-                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
+-                }
+-                // std::cout << currFeatures[i].getWindowSize() << std::endl;
+-                std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
+-                if (currFeatures[i].getHealth() == DEAD) {
+-
+-                    std::cout << "feature died" << std::endl;
+-                    currFeatures.erase(currFeatures.begin() + i);
+-                    i--;
+-                    continue;
+-                }
+ 
++            std::vector<Feature> alive;
++            alive.reserve(currFeatures.size());
++            for (size_t i = 0; i < currFeatures.size(); i++) {
++                if (shouldLog || status[i] == DEAD) {
++                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), status[i]);
++                }
++                if (status[i] == DEAD) continue;
+ 
+                 Eigen::Vector2d pos = currFeatures[i].getPosition();
+-
+-                cv::circle(
+-                    canvas,
+-                    cv::Point(
+-                        static_cast<int>(pos.x()),
+-                        static_cast<int>(pos.y())
+-                    ),
+-                    3,
+-                    cv::Scalar(0, 255, 0),
+-                    1
+-                );
+-                //std::cout << "Flow: "
+-                //<< currFeatures[i].getFlow().transpose()
+-                //<< '\n';
+-                // next to your "Features detected" print
+-                
++                cv::circle(canvas, cv::Point(static_cast<int>(pos.x()), static_cast<int>(pos.y())),
++                           3, cv::Scalar(0, 255, 0), 1);
++                alive.push_back(std::move(currFeatures[i]));
+             }
++            currFeatures.swap(alive);
+ 
+             if (shouldLog) {
+                 lastLogTime = highestTimestamp;
+@@ -335,23 +350,16 @@ int main(void) {
+             caerEventPacketContainerFree(packetContainer);
+             currEvents.clear();
+ 
+-// Draw all stored features as green circles
+-            // for (Feature& f : currFeatures) {
+-
+-                
+-            // }
+-
+-            // // Display camera output
+-            
++            // waitKey blocks >= 1 ms, so draw at ~30 Hz instead of on every packet container
+             auto now = std::chrono::steady_clock::now();
+             if (now - lastDraw >= std::chrono::milliseconds(33)) {
+                 cv::imshow("Features", canvas);
+-                cv::waitKey(1);
++                if (cv::waitKey(1) == 27) globalShutdown.store(true); // ESC to quit
+                 canvas.setTo(cv::Scalar(128, 128, 128));
+                 lastDraw = now;
+-            }          
+-            
+-        }     
++            }           
++}
++    
+ 
+     // std::vector<int> temp;
+     // for (int i = 0; i < (int)currFeatures.size(); i++){
+@@ -373,10 +381,8 @@ int main(void) {
+ 
+ 
+     caerDeviceDataStop(dvxplr_hndl);
+-    caerFilterDVSNoiseDestroy(noiseFilter);
+     caerDeviceClose(&dvxplr_hndl);
+     // cv::destroyAllWindows();
+     printf("Shutdown successful.\n");
+     return EXIT_SUCCESS;
+-
+ }
+diff --git a/src/Feature.cpp b/src/Feature.cpp
+index fe3f03d..de2f541 100644
+--- a/src/Feature.cpp
++++ b/src/Feature.cpp
+@@ -45,20 +45,28 @@ void Feature::setEvents(){
+     //swap keeps both buffer capacity, so the next window doesnt reallocate
+     std::swap(previousEvents, currentEvents);
+     currentEvents.clear();
+-    bProp.clear();
+ }
+-void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
+-    Eigen::Vector2d end = position + dti * flow;
+-    double x0 = std::min(position.x(), end.x()) - xi, x1 = std::max(position.x(), end.x()) + xi;
+-    double y0 = std::min(position.y(), end.y()) - xi, y1 = std::max(position.y(), end.y()) + xi;
++void Feature::findEvents(const std::vector<Event>& E){
++
++    for(const Event& event : E){
+ 
+-    grid.forEachInBox(x0, y0, x1, y1, [&](int idx){
+-        const Event& event = E[idx];
+         double t = event.t();
+-        if (t < Ti || t >= Ti + dti) return;
+-        Eigen::Vector2d backProp = event.pos() - (t - Ti) * flow;
+-        if ((backProp - position).norm() <= xi) currentEvents.push_back(event);
+-    });
++
++        // Only collect events inside the current time window
++        if (t < Ti || t >= Ti + dti){
++            continue;
++        }
++
++        Eigen::Vector2d x = event.pos();
++        double tbar = (t - Ti);
++
++        Eigen::Vector2d backProp = x - tbar * flow;
++
++        if ((backProp - position).norm() <= xi){
++
++            currentEvents.push_back(event);
++        }
++    }
+ }
+ // void Feature::findEvents(const std::vector<Event>& E){
+     
+@@ -79,14 +87,19 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
+ //     }
+ 
+ 
+-    bool Feature::findEventsInit(const EventGrid& grid, const std::vector<Event>& E){
+-    grid.forEachInBox(position.x() - xi, position.y() - xi, position.x() + xi, position.y() + xi, [&](int idx){
+-        if (currentEvents.size() >= 250) return;
+-        const Event& event = E[idx];
+-        if (event.t() < Ti) return;
+-        Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
+-        if ((backProp - position).norm() < xi) currentEvents.push_back(event);
+-    });
++    bool Feature::findEventsInit(const std::vector<Event>& E){
++    for (const Event& event : E){
++        if (event.t() < Ti){
++        continue;
++        }
++        Eigen::Vector2d x = event.pos();
++        double tbar = (event.t() - Ti);
++        Eigen::Vector2d backProp = x - tbar * flow;
++        if ((backProp - position).norm() < xi){
++            currentEvents.push_back(event);
++            if (currentEvents.size() >= 250) break;
++        }
++    }
+     return checkInitWindow();
+ }
+ // bool Feature::findEventsInit(const std::vector<Event>& E){
+@@ -117,9 +130,7 @@ bool Feature::updateTimeWindow(double highestTimestamp){
+             return false;
+         }
+ 
+-        double tMax = std::max_element(currentEvents.begin(), currentEvents.end(),
+-        [](const Event& a, const Event& b){ return a.t() < b.t(); })->t();
+-        dti = tMax - Ti;
++        dti = currentEvents.back().t() - Ti;
+ 
+         if (dti <= 0){
+             return false;
+@@ -155,15 +166,6 @@ bool Feature::updateTimeWindow(double highestTimestamp){
+     return false;
+ }
+ 
+-void Feature::subsampleEvents(size_t maxN){
+-    if (currentEvents.size() <= maxN) return;
+-    double step = (double)currentEvents.size() / maxN;
+-    std::vector<Event> kept;
+-    kept.reserve(maxN);
+-    for (size_t k = 0; k < maxN; k++) kept.push_back(currentEvents[(size_t)(k * step)]);
+-    currentEvents.swap(kept);
+-}
+-
+ // bool Feature::updateTimeWindow(double highestTimestamp){
+ //     if (dti == 0){
+ //         dti = currentEvents.back().t() - Ti;
+@@ -205,23 +207,25 @@ void Feature::updateBackPropagation(){
+     }
+ }
+ void Feature::generateKD(my_kd_tree_t& tree){
+-    weights.resize(bProp.size());
+-    for (auto& w : weights) w.clear();         
+-    if (landmark.empty()) return;
++    weights.clear();
++    weights.resize(bProp.size());      // one entry per current event, always aligned
+ 
+-    Matches matches;
++    if (landmark.empty()) return;      // no landmarks yet: all weight lists stay empty
++    Matches matches;                   // reused: radiusSearch clears it, keeps the capacity
+     nanoflann::SearchParameters params;
+-    params.sorted = false;
+-
++    params.sorted = false;             // weights don't need distance order, skip the sort
+     for (size_t i = 0; i < bProp.size(); i++){
+         tree.index->radiusSearch(bProp[i].data(), r2, matches, params);
++
+         double sum = 0.0;
+         for (const auto& m : matches){
+             double score = std::exp(-m.second / 4.0);
+             weights[i].push_back({m.first, score});
+             sum += score;
+         }
+-        if (sum > 0.0) for (auto& a : weights[i]) a.weight /= sum;
++        if (sum > 0.0){
++            for (auto& a : weights[i]) a.weight /= sum;
++        }
+     }
+ }
+ // void Feature::generateKD(){
+@@ -325,15 +329,24 @@ int Feature::getDeadCycles() const {
+ 
+ double Feature::calculateCost() {
+     cost = 0.0;
+-    size_t matched = 0;
+-    for (size_t k = 0; k < currentEvents.size(); ++k){
+-        if (weights[k].empty()) continue;
+-        matched++;
+-        Eigen::Vector2d bp = currentEvents[k].pos() - (currentEvents[k].t() - Ti) * flow;
+-        for (const Association& a : weights[k])
+-            cost += a.weight * (bp - landmark[a.landmarkIndex]).squaredNorm();
++
++    for(std::size_t k = 0; k < currentEvents.size(); ++k){
++        Eigen::Vector2d xk = currentEvents[k].pos();
++        
++        double tbar = (currentEvents[k].t() - Ti);
++        for(const Association& association : weights[k]){
++            double rkj = association.weight;
++            std::size_t j = association.landmarkIndex;
++            Eigen::Vector2d currLandmark = landmark[j];
++            Eigen::Vector2d mag = (xk - tbar * flow) - currLandmark;
++
++            // std::cout << "backpropogated: " << (xk - tbar * flow) << std::endl;
++            // std::cout << "normal: " << (xk) << std::endl;
++            cost += rkj * mag.squaredNorm();
++            
++        }
+     }
+-    cost = matched ? cost / matched : std::numeric_limits<double>::infinity();
++            
+     return cost;
+ }
+ 
+diff --git a/src/OpticalFlow.cpp b/src/OpticalFlow.cpp
+index 666c7db..4a0b52a 100644
+--- a/src/OpticalFlow.cpp
++++ b/src/OpticalFlow.cpp
+@@ -1,49 +1,62 @@
+ #include <../include/OpticalFlow.hpp>
+ #include <../include/Feature.hpp>
+-#define MAXITR 50
++#include <cmath>
++#include <limits>
++#define MAXITR 20 // relative-change stop usually exits in a few iterations; this is only a cap
+ 
+-constexpr double FLOW_TOL_PX = 0.05;  
+-// constexpr double COST_TOL    = epsilo;   
+ 
+-int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, const double epsilon, double highestTimestamp){
++
++
++int FeatureCollection(Feature& F, const std::vector<Event>& currEvents, double epsilon, double highestTimestamp){
+     if (!F.checkWindow()){
+-        if (!F.findEventsInit(grid, currEvents)){
++        if (!F.findEventsInit(currEvents)){
+             F.assignAlive(INIT);
+             return INIT;
+         }
+-    } else {
+-        F.findEvents(grid, currEvents);
+-        if (!F.isWindowComplete(highestTimestamp)) return HEALTHY;
+-
+-        F.subsampleEvents(MAX_WINDOW_EVENTS);
+-        F.propagatePreviousEvents();
+-
+-        if (!F.getLandmark().empty()) {
+-            my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
+-            Eigen::Vector2d previousFlow, newFlow;
+-            int iter = 0;
+-            do {
+-                previousFlow = F.getFlow();
+-                F.updateBackPropagation();
+-                F.generateKD(mat_index);
+-                newFlow = F.updateFlow();
+-                iter++;
+-            } while (F.calculateCost() > epsilon && iter < MAXITR);
+-
+-            // F.setIters(iter);
+-            F.setConverged(F.calculateCost() <= epsilon);
+-
+-            if (F.checkHealth() > 3){
+-                F.assignAlive(DEAD);
+-                return DEAD;
+-            }
+-            F.updatePosition(F.getDti());
++    }else{
++        F.findEvents(currEvents); //collects current events within spatiotmeporal window
++        if (!F.isWindowComplete(highestTimestamp)){
++            return HEALTHY;
+         }
+-    }
++        F.propagatePreviousEvents(); //turns previous events into landmarks
++        if (F.getLandmark().empty()) {
++            return HEALTHY;   // nothing to match against this window; skip EM
++        }
++        my_kd_tree_t mat_index(dim, F.getLandmark(), leaf); // landmarks are fixed for the whole window, build once
+ 
++        // EM: stop when the cost stops improving (relative change <= epsilon), not on an absolute
++        // cost, because the cost is a SUM over matches and grows with the number of events.
++        int iter = 0;
++        double cost = 0.0;
++        double prevCost = std::numeric_limits<double>::max();
++        bool converged = false;
++        while (iter < MAXITR) {
++            F.updateBackPropagation();
++            F.generateKD(mat_index);
++            F.updateFlow();
++            cost = F.calculateCost();
++            iter++;
++            if (std::abs(prevCost - cost) <= epsilon * prevCost) { converged = true; break; }
++            prevCost = cost;
++        }
++        F.setIters(iter);
++        // shortcut: cost == 0 means no event matched a landmark, so "no change" is not convergence;
++        // upgrade to a matched-event count if features with few matches still slip through.
++        F.setConverged(converged && cost > 0.0);
++        if (F.checkHealth() > 3){
++            F.assignAlive(DEAD);
++            return DEAD;
++        }
++        F.updatePosition(F.getDti());
++    }   
+     if (F.updateTimeWindow(highestTimestamp)){
+         F.setEvents();
+-        F.findEvents(grid, currEvents);  
++        // the window just advanced: collect this packet's events that fall in the NEW window,
++        // otherwise they are never seen and the next window starts (nearly) empty
++        F.findEvents(currEvents);
+     }
++    
++
+     return HEALTHY;
+-}
+\ No newline at end of file
++
++}
+diff --git a/src/distance_plot.py b/src/distance_plot.py
+index 925885b..3647e4d 100644
+--- a/src/distance_plot.py
++++ b/src/distance_plot.py
+@@ -52,7 +52,7 @@ ax[1][1].scatter(
+ ax[1][1].set_xlabel("Pixel poistion X")
+ ax[1][1].set_ylabel("Pixel position y")
+ 
+-ax[2][0].scatter(np.array(df["id"]), np.array(total_movement), c = df["id"], cmap='tab20')
++ax[2][0].scatter(np.array(t), np.array(total_movement), c = df["id"], cmap='tab20')
+ ax[2][1].scatter(np.array(t), np.array(df["window_size"]), c = df["id"], cmap='tab20')
+ 
+ ax[2][1].set_xlabel("Time(s)")
+diff --git a/unit_tests/test_em_convergence.cpp b/unit_tests/test_em_convergence.cpp
+new file mode 100644
+index 0000000..17b4f9c
+--- /dev/null
++++ b/unit_tests/test_em_convergence.cpp
+@@ -0,0 +1,31 @@
++// Synthetic EM check: an L-shaped corner moving at a known flow, fed in packets.
++// EM must recover the flow within 20%, exit before MAXITR, and never kill the feature.
++// Usage: ./test_em_convergence [events_per_packet]   (try 12, 60, 600)
++#include "OpticalFlow.hpp"
++#include <cassert>
++#include <cstdio>
++#include <cstdlib>
++int main(int argc, char** argv){
++    const size_t P = argc > 1 ? std::atoi(argv[1]) : 600;
++    const Eigen::Vector2d u(1e-3, 5e-4);              // px/us (1000, 500 px/s)
++    std::vector<Event> all;
++    for (uint32_t t = 0; t < 40000; t += 20)
++        for (int k = 0; k < 6; k++) {
++            Eigen::Vector2d p = Eigen::Vector2d(100, 100) + u * t;
++            Eigen::Vector2d q = p + (k < 3 ? Eigen::Vector2d(k*2, 0) : Eigen::Vector2d(0, (k-3)*2));
++            Event e; e.position << (uint16_t)std::lround(q.x()), (uint16_t)std::lround(q.y());
++            e.timestamp = t; e.polarity = true; all.push_back(e);
++        }
++    Feature f(Eigen::Vector2d(100,100), 0.0, 0.0, {}, {}, Eigen::Vector2d(0,0), 15.0);
++    int maxIters = 0;
++    for (size_t s = 0; s < all.size(); s += P) {
++        std::vector<Event> pkt(all.begin()+s, all.begin()+std::min(all.size(), s+P));
++        assert(FeatureCollection(f, pkt, 1e-3, pkt.back().t()) != DEAD);
++        maxIters = std::max(maxIters, f.getIters());
++    }
++    std::printf("maxIters=%d flow=(%.3e, %.3e) true=(%.3e, %.3e)\n",
++                maxIters, f.getFlow().x(), f.getFlow().y(), u.x(), u.y());
++    assert(f.hasConverged() && maxIters > 0 && maxIters < 20);
++    assert((f.getFlow() - u).norm() < 0.2 * u.norm());
++    std::puts("EM convergence test passed");
++}

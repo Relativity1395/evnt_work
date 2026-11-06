@@ -61,6 +61,7 @@ class Feature{
         int deadCycles = 0;
         size_t id;
         bool health = false;
+        int iters = 0;
 
     public:
 
@@ -103,7 +104,9 @@ class Feature{
         size_t getID() const { return id; }
         double getWindowSize() const { return dti;}
         void assignAlive(bool alive) {health = alive;}
+        int setIters(int& iterations) {iters = iterations;}
         bool getHealth() const {return badHealth;}
+        int getIters() const {return iters;}
     //3D projection
         void featureProjection(); //takes 2D points and projects them into 3D space
 
