@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # df = pd.read_csv("build/feature_status.csv")
-df = pd.read_csv("build/feature_status.csv")
+df = pd.read_csv("/home/drone-laptop/feature_status_test_4.csv")
 df = df.sort_values("timestamp")
 
 # plt.figure(figsize=(12, 7))
