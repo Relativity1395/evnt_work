@@ -1,6 +1,6 @@
 #include <../include/OpticalFlow.hpp>
 #include <../include/Feature.hpp>
-#define MAXITR 50
+
 
 constexpr double FLOW_TOL_PX = 0.05;  
 // constexpr double COST_TOL    = epsilo;   

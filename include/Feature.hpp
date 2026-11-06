@@ -3,7 +3,14 @@
 #include <../third_party/KDTreeVectorOfVectorsAdaptor.h>
 #include <../include/Types.hpp>
 #include <../include/WeightDist.hpp>
+
+
 #define MAXDELT 1000000
+#define MIN_EVNT_INIT 250
+#define MIN_EVNT_DEATH 100
+#define MAXITR 50
+#define EPSILON 5
+#define MAX_WINDOW_EVENTS 400
 // Per-feature state / related events tracking
 typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
@@ -12,7 +19,7 @@ using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
 const double r2 = 18;
 const int dim = 2;
 const int leaf = 10;
-constexpr size_t MAX_WINDOW_EVENTS = 400;
+
 
 struct EventGrid {
     static constexpr int CELL = 16;

@@ -60,28 +60,12 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
         if ((backProp - position).norm() <= xi) currentEvents.push_back(event);
     });
 }
-// void Feature::findEvents(const std::vector<Event>& E){
-    
-//     for(const Event& event : E){
-//         Eigen::Vector2d x = event.pos();
-//         double tbar = event.t() - Ti;
-//         Eigen::Vector2d u = flow;
-//         Eigen::Vector2d fti = position;
-//         Eigen::Vector2d backProp = x - tbar * u;
-//         Eigen::Vector2d V = backProp - fti;
-//         if (event.timestamp >= Ti && event.timestamp <= (Ti + dti)){
-//             if(V.norm() <= xi){
-//                 currentEvents.push_back(event);
-//                 bProp.push_back(backProp);
-//             }
-//         }
-//         }
-//     }
+
 
 
     bool Feature::findEventsInit(const EventGrid& grid, const std::vector<Event>& E){
     grid.forEachInBox(position.x() - xi, position.y() - xi, position.x() + xi, position.y() + xi, [&](int idx){
-        if (currentEvents.size() >= 250) return;
+        if (currentEvents.size() >= MIN_EVNT_INIT) return;
         const Event& event = E[idx];
         if (event.t() < Ti) return;
         Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
@@ -89,25 +73,7 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
     });
     return checkInitWindow();
 }
-// bool Feature::findEventsInit(const std::vector<Event>& E){
-//     currentEvents.clear();
-//     bProp.clear();
 
-//     for(const Event& event : E){
-//         Eigen::Vector2d x = event.pos();
-//         double tbar = event.t() - Ti;
-//         Eigen::Vector2d u = flow;
-//         Eigen::Vector2d fti = position;
-//         Eigen::Vector2d backProp = x - tbar * u;
-//         Eigen::Vector2d V = backProp - fti;
-
-//         if (E.size() <= 300 && V.norm() < xi){
-//             currentEvents.push_back(event);
-//             bProp.push_back(backProp);
-//         }
-//     } 
-//     return checkInitWindow();  
-// }
 bool Feature::updateTimeWindow(double highestTimestamp){
 
     // Initial time window
@@ -164,22 +130,6 @@ void Feature::subsampleEvents(size_t maxN){
     currentEvents.swap(kept);
 }
 
-// bool Feature::updateTimeWindow(double highestTimestamp){
-//     if (dti == 0){
-//         dti = currentEvents.back().t() - Ti;
-//         return true;
-//     }else{
-//         if (highestTimestamp >= Ti + dti){
-//             Ti = Ti + dti;
-//             dti = 3.0/getMedianMagnitude();
-//             if (dti >= MAXDELT){
-//                 dti = MAXDELT;
-//             }
-//             return true;
-//         } 
-//     }
-//     return false;
-// }   
 
 void Feature::propagatePreviousEvents(){
     landmark.clear();
@@ -224,51 +174,7 @@ void Feature::generateKD(my_kd_tree_t& tree){
         if (sum > 0.0) for (auto& a : weights[i]) a.weight /= sum;
     }
 }
-// void Feature::generateKD(){
 
-//     const double r2 = 4.2426;
-//     const int dim = 2;
-//     const int leaf = 10;
-    
-//     typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
-//     my_kd_tree_t mat_index(dim, landmark, leaf);
-//     using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
-//     Matches ret_matches;
-//     std::vector<Matches> totMatches;
-
-//     for (size_t i = 0; i < bProp.size(); i++){
-//         const size_t nMatches = mat_index.index->radiusSearch(bProp[i].data(), r2, ret_matches);
-        
-//         if (nMatches > 0){
-//             totMatches.push_back(ret_matches);
-//         }
-
-
-//     }
-
-//     for (std::size_t k = 0; k < totMatches.size(); ++k) {
-//         auto& eventWeights = weights[k];
-//         eventWeights.reserve(totMatches[k].size());
-
-//         double sum = 0.0;
-
-//         // Calculate gaussian scores and their sum
-//         for (const auto& match : totMatches[k]) {
-//             const double score = std::exp(-match.second / 4.0);
-
-//             eventWeights.push_back({match.first, score});
-//             sum += score;
-//         }
-
-//         // Divide each score by the sum to obtain rkj
-//         for (auto& association : eventWeights) {
-//             association.weight /= sum;
-//         }
-//     }
-
-
-
-// }
 
 Eigen::Vector2d Feature::getPosition() const {
     Eigen::Vector2d pos = position;
@@ -306,7 +212,7 @@ double Feature::getMedianMagnitude() {
 }
 
 int Feature::checkHealth(){
-    badHealth = (!converged) || (currentEvents.size() < 100);
+    badHealth = (!converged) || (currentEvents.size() < MIN_EVNT_DEATH);
     // std::cout << "Badhealth: " << badHealth <<" Current events: " << currentEvents.size() << std::endl;
     if (badHealth == true){
         deadCycles++;
@@ -374,5 +280,5 @@ bool Feature::checkWindow(){
 }
 
 bool Feature::checkInitWindow(){
-    return (currentEvents.size() >= 200);
+    return (currentEvents.size() >= MIN_EVNT_INIT);
 }

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("/home/drone-laptop/feature_status_test_4.csv")
+df = pd.read_csv("build/feature_status.csv")
 df = df.sort_values("timestamp")
 
 PLAYBACK_SPEED = 0.5  # 0.5 = half speed, 1.0 = real time, 2.0 = double speed

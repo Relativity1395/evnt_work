@@ -162,7 +162,7 @@ int main(void) {
 
     size_t nextFeatureID = 0;
     double lastLogTime = 0;
-    const double LOG_INTERVAL = 1000000;
+    const double LOG_INTERVAL = 100;
     std::ofstream logFile("feature_status.csv");
 
   
