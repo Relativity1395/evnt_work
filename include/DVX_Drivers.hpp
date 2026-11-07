@@ -23,7 +23,7 @@
 #define DVX_DRIVERS_H
 #define WIDTH 640
 #define HEIGHT 480
-#define MAXFEAT 20
+
 
 
 
