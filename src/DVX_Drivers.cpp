@@ -167,7 +167,7 @@ int main(void) {
 
   
 
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size, iters\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters\n" << "\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
@@ -288,6 +288,8 @@ int main(void) {
             #pragma omp parallel for schedule(dynamic, 1)
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
+                // std::cout << "thread number: " << omp_get_thread_num() << std::endl;
+    
             }
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {

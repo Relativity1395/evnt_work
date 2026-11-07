@@ -40,7 +40,7 @@ for id_val, group in df.groupby("id"):
     # (Note: Standard scatter plots usually require both an X and Y array of matching lengths.
     # If you just want to plot the single net change against the ID, you can do this:)
     plt.scatter(id_val, px_change)
-
+    plt.ylim(-640,640)
    
 
 

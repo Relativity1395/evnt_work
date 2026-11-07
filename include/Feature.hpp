@@ -5,12 +5,13 @@
 #include <../include/WeightDist.hpp>
 
 
-#define MAXDELT 1000000
+#define MAXDELT 10000000
 #define MIN_EVNT_INIT 250
 #define MIN_EVNT_DEATH 100
-#define MAXITR 50
-#define EPSILON 5
+#define MAXITR 1000
+#define EPSILON 10
 #define MAX_WINDOW_EVENTS 400
+#define MAXFEAT 40
 // Per-feature state / related events tracking
 typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
@@ -70,6 +71,7 @@ class Feature{
         bool health = false;
         int iters = 0;
 
+
     public:
 
     //Feature tracking
@@ -111,9 +113,18 @@ class Feature{
         size_t getID() const { return id; }
         double getWindowSize() const { return dti;}
         void assignAlive(bool alive) {health = alive;}
-        int setIters(int& iterations) {iters = iterations;}
+        
         bool getHealth() const {return badHealth;}
         int getIters() const {return iters;}
+        int setIters(bool init){
+            if (init){
+                iters = 0;
+            }else{
+                iters++;
+            }
+            return iters;
+        }
+        
     //3D projection
         void featureProjection(); //takes 2D points and projects them into 3D space
 

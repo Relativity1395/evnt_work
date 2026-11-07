@@ -21,13 +21,14 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
         if (!F.getLandmark().empty()) {
             my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
             Eigen::Vector2d previousFlow, newFlow;
-            int iter = 0;
+            int iter = F.setIters(true);
             do {
                 previousFlow = F.getFlow();
                 F.updateBackPropagation();
                 F.generateKD(mat_index);
                 newFlow = F.updateFlow();
-                iter++;
+                iter = F.setIters(false);
+
                 
             } while (F.calculateCost() > epsilon && iter < MAXITR);
                 
