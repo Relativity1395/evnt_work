@@ -38,7 +38,7 @@ for id_val, group in df.groupby("id"):
         net_displacement += group["px"].iloc[i]
     del_t = group["timestamp"].iloc[-1] - group["timestamp"].iloc[0]
     if net_displacement > 100000 and del_t > 1e6:
-        ax[0][0].scatter(np.array(id_val), np.array(del_t))
+        ax[0][0].scatter(np.array(id_val), np.array(net_displacement))
         ax[0][0].set_ylabel("Net displacement")
         ax[0][0].set_xlabel("ID")
         ax[0][1].scatter(np.array(group["events"]), np.array(group["window_size"]))
@@ -52,5 +52,8 @@ for id_val, group in df.groupby("id"):
         ax[1][1].set_xlabel("time")
         ax[1][1].set_ylabel("flow in the x direction")
         ax[1][1].set_ylim(0, 0.0001)
-
+        
+        ax[2][0].scatter(np.array(group["id"]), np.array(group["events"]))
+        ax[2][0].set_xlabel("ID")
+        ax[2][0].set_ylabel("amount of events per feature")
 plt.show()

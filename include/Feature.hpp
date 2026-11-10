@@ -5,13 +5,13 @@
 #include <../include/WeightDist.hpp>
 
 
-#define MAXDELT 10000000
-#define MIN_EVNT_INIT 250
+#define MAXDELT 1000000
+#define MIN_EVNT_INIT 100
 #define MIN_EVNT_DEATH 100
 #define MAXITR 1000
-#define EPSILON 10
+#define EPSILON 5
 #define MAX_WINDOW_EVENTS 400
-#define MAXFEAT 40
+#define MAXFEAT 10
 // Per-feature state / related events tracking
 typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;

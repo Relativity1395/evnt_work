@@ -298,7 +298,7 @@ int main(void) {
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
                 // if (currFeatures[i].getFlow().norm() > 1e-4){
-                    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getFlow().x() << " y position: " << currFeatures[i].getFlow().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize()/(1000000) << std::endl;
+                    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
                 // }
                     if (currFeatures[i].getHealth() == DEAD) {
 
