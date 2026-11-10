@@ -8,6 +8,11 @@ constexpr double FLOW_TOL_PX = 0.05;
 int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event>& currEvents, const double epsilon, double highestTimestamp){
     if (!F.checkWindow()){
         if (!F.findEventsInit(grid, currEvents)){
+            if (highestTimestamp - F.getTi() > MAX_INT_TIME) {
+                F.markDead();
+                F.assignAlive(DEAD);
+                return DEAD;
+            }
             F.assignAlive(INIT);
             return INIT;
         }
@@ -48,5 +53,6 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
         F.setEvents();
         F.findEvents(grid, currEvents);  
     }
+    F.assignAlive(HEALTHY);
     return HEALTHY;
 }

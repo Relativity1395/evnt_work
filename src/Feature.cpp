@@ -91,8 +91,8 @@ bool Feature::updateTimeWindow(double highestTimestamp){
             return false;
         }
 
-        if (dti > MAXDELT){
-            dti = MAXDELT;
+        if (dti > MAX_INT_TIME){
+            dti = MAX_INT_TIME;
         }
         Ti += dti;
         return true;

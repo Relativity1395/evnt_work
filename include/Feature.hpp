@@ -12,6 +12,8 @@
 #define EPSILON 5
 #define MAX_WINDOW_EVENTS 400
 #define MAXFEAT 10
+//a new feature must collect MIN_EVNT_INT event within this time window to be considered a valid feature
+#define MAX_INT_TIME 500000
 // Per-feature state / related events tracking
 typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;
@@ -68,7 +70,7 @@ class Feature{
         bool converged = false;
         int deadCycles = 0;
         size_t id;
-        bool health = false;
+        int state = 0; //Feature state: INIT/ DEAD/HEALTHY
         int iters = 0;
 
 
@@ -112,8 +114,11 @@ class Feature{
         void setID(size_t newID) { id = newID; }
         size_t getID() const { return id; }
         double getWindowSize() const { return dti;}
-        void assignAlive(bool alive) {health = alive;}
-        
+        void assignAlive(int newState) {state = newState;}
+        int getState() const {return state;}
+        double getTi() const {return Ti;}
+        void markDead() {badHealth = true;}
+
         bool getHealth() const {return badHealth;}
         int getIters() const {return iters;}
         int setIters(bool init){

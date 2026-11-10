@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <fstream>
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -85,7 +86,7 @@ ImuSample get_imu_sample(caerIMU6EventPacket imuPacket, int j) {
 // }
 
 
-void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double timestamp, size_t activeFeatures, int status) {
+void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double timestamp, size_t activeFeatures, int status, double wallMs, double batchMs) {
     const char* statusStr;
 
     if (status == DEAD)
@@ -107,7 +108,8 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << feature.getEventCount() << ","
         << (feature.hasConverged() ? "true" : "false") << ","
         << feature.getWindowSize() << "," 
-        << feature.getIters() << "\n";
+        << feature.getIters() << "\n"
+        << std::setprecision(3) << wallMs << "," << batchMs << "\n";
 
 
 }
@@ -167,7 +169,7 @@ int main(void) {
 
   
 
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters,wall_ms,batch_ms\n" << "\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";
@@ -175,6 +177,7 @@ int main(void) {
     }
     
     auto lastDraw = std::chrono::steady_clock::now();
+    const auto runStart = lastDraw;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
@@ -184,6 +187,7 @@ int main(void) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
                 continue;
             }
+            const auto batchStart = std::chrono::steady_clock::now();
 
             int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
 
@@ -292,9 +296,14 @@ int main(void) {
     
             }
                 //std::cout << "FeatureCollection returned: " << result << '\n';
+            const auto batchEnd = std::chrono::steady_clock::now();
+            const double batchMs = std::chrono::duration<double, std::milli>(batchEnd - batchStart).count();
+            const double wallMs = std::chrono::duration<double, std::milli>(batchEnd - runStart).count();
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
                 if (shouldLog || currFeatures[i].getHealth() == DEAD) {
-                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), currFeatures[i].getHealth());
+                    // a feature about to be remove logs as dead otherwise init or alive
+                    int status = currFeatures[i].getHealth() ? DEAD : currFeatures[i].getState();
+                    logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), status, wallMs, batchMs);
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
                 // if (currFeatures[i].getFlow().norm() > 1e-4){
