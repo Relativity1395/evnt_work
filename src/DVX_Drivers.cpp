@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <fstream>
-//
+
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
     if (signal == SIGTERM || signal == SIGINT) globalShutdown.store(true);
