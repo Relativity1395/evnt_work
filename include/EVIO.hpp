@@ -13,5 +13,7 @@ class StateVector{
     public:
         StateVector();
         void propagate(const imu_t& imu, double dt);
-        
+        void initialize(const std::vector<imu_t>& imu_buffer);
+        static Eigen::Vector4d quad_derivative(const Eigen::Quatterniond& q, const Eigen::Vector3d* w);
+
 };
