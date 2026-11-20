@@ -8,13 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set (CMAKE_BUILD_TYPE Debug)
+
 
 set(CMAKE_BUILD_TYPE Release)
 
 # CPU tuning for every target (was only on dvxplore_simple)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-  set(EVIO_ARCH_FLAGS -mcpu = cortex-a78ae)
+  set(EVIO_ARCH_FLAGS -mcpu=cortex-a78ae)
 else()
   set(EVIO_ARCH_FLAGS -march=native)
 endif()
@@ -73,7 +73,8 @@ target_link_libraries(dvxplore_simple PRIVATE
 )
 
 target_link_libraries(dvxplore_simple PRIVATE OpenMP::OpenMP_CXX)
-target_compile_options(dvxplore_simple PRIVATE -march=native)
+target_compile_options(dvxplore_simple PRIVATE ${EVIO_ARCH_FLAGS})
+target_compile_options(dvxplore_simple PRIVATE ${EVIO_ARCH_FLAGS})
 
 # unit tests
 # add_executable(test_feature

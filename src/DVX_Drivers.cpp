@@ -169,7 +169,7 @@ int main(void) {
 
   
 
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters,wall_ms,batch_ms\n" << "\n";
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters,wall_ms,batch_ms\n";
 
     if (!logFile.is_open()) {
         std::cerr << "Failed to open feature log file!\n";

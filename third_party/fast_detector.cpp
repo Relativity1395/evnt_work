@@ -103,6 +103,6 @@ bool FastDetector::isFeature(const Event& e)
   for (int i =0 ; i < 20; i++){
     r4[i] = r4[i +20] = center[circle4_[i][1] * sensor_width_ + circle4_[i][0]];
   }
-  return hasStreak<20,3,6>(r4);
+  return hasStreak<20,4,8>(r4);
 }
 } // namespace
