@@ -27,19 +27,20 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
             my_kd_tree_t mat_index(dim, F.getLandmark(), leaf);
             Eigen::Vector2d previousFlow, newFlow;
             int iter = F.setIters(true);
+            double cost;
             do {
                 previousFlow = F.getFlow();
                 F.updateBackPropagation();
                 F.generateKD(mat_index);
                 newFlow = F.updateFlow();
                 iter = F.setIters(false);
-
+                cost = F.calculateCost();
                 
-            } while (F.calculateCost() > epsilon && iter < MAXITR);
+            } while (cost > epsilon && iter < MAXITR);
                 
             
             // F.setIters(iter);
-            F.setConverged(F.calculateCost() <= epsilon);
+            F.setConverged(cost <= epsilon); // reuse calling calculatecost again gave the same value
 
             if (F.checkHealth() > 3){
                 F.assignAlive(DEAD);

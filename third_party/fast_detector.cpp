@@ -1,7 +1,52 @@
 #include "fast_detector.h"
 
+#include <algorithm>
+
+
 namespace corner_event_detector
 {
+
+namespace
+{
+template <int N, int MIN_STREAK, int MAX_STREAK>
+bool hasStreak(const uint32_t* r)
+
+{
+  for (int i = 0; i < N; i++)
+  {
+    // first streak event must no be older than its left neightbor
+    if (r[i] < r[i +N -1])
+      continue;
+    
+    for (int streak_size = MIN_STREAK; streak_size <= MAX_STREAK; streak_size++)
+    {
+      //last streak event must not be older than its right neighbor
+      if (r[i + streak_size -1] < r[i+streak_size])
+        continue;
+      uint32_t min_t = r[i];
+      for (int j = 1; j < streak_size; j++)
+      {
+        min_t = std::min(min_t, r[i +j]);
+      }
+      bool did_break = false;
+      for (int j = streak_size ; j < N; j++)
+      {
+        if (r[i +j] >= min_t)
+        {
+          did_break = true;
+          break;
+        }
+      }
+      if (!did_break)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+}
+
 
 FastDetector::FastDetector(bool connect)
 : Detector(connect),
@@ -17,9 +62,9 @@ FastDetector::FastDetector(bool connect)
 {
   detector_name_ = "FAST";
 
-  // allocate SAE matrices
-  sae_[0] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
-  sae_[1] = Eigen::MatrixXd::Zero(sensor_width_, sensor_height_);
+  // allocate SAE matrices 
+  sae_[0].assign(sensor_width_ * sensor_height_, 0);
+  sae_[1].assign(sensor_width_ * sensor_height_, 0);
 }
 
 FastDetector::~FastDetector()
@@ -30,10 +75,11 @@ bool FastDetector::isFeature(const Event& e)
 {
   // update SAE
   const int ex = static_cast<int>(e.position.x());
-  const int ey = static_cast<int>(e.position.y());\
+  const int ey = static_cast<int>(e.position.y());
 
   const int pol = e.polarity ? 1 : 0;
-  sae_[pol](ex, ey) = e.timestamp; //same order as every read below
+  const uint32_t* center = sae_[pol].data() + ey * sensor_width_ + ex;
+  sae_[pol][ey * sensor_width_ + ex] = e.timestamp;
 
   const int max_scale = 1;
 
@@ -45,101 +91,18 @@ bool FastDetector::isFeature(const Event& e)
     return false;
   }
 
-  bool found_streak = false;
-
-  for (int i=0; i<16; i++)
-  {
-    for (int streak_size = 3; streak_size<=6; streak_size++)
-    {
-      // check that streak event is larger than neighbor
-      if (sae_[pol](ex+circle3_[i][0], ey+circle3_[i][1]) <  sae_[pol](ex+circle3_[(i-1+16)%16][0], ey+circle3_[(i-1+16)%16][1]))
-        continue;
-
-      // check that streak event is larger than neighbor
-      if (sae_[pol](ex+circle3_[(i+streak_size-1)%16][0], ey+circle3_[(i+streak_size-1)%16][1]) <          sae_[pol](ex+circle3_[(i+streak_size)%16][0], ey+circle3_[(i+streak_size)%16][1]))
-        continue;
-
-      double min_t = sae_[pol](ex+circle3_[i][0], ey+circle3_[i][1]);
-      for (int j=1; j<streak_size; j++)
-      {
-        const double tj = sae_[pol](ex+circle3_[(i+j)%16][0], ey+circle3_[(i+j)%16][1]);
-        if (tj < min_t)
-          min_t = tj;
-      }
-
-      bool did_break = false;
-      for (int j=streak_size; j<16; j++)
-      {
-        const double tj = sae_[pol](ex+circle3_[(i+j)%16][0], ey+circle3_[(i+j)%16][1]);
-
-        if (tj >= min_t)
-        {
-          did_break = true;
-          break;
-        }
-      }
-
-      if (!did_break)
-      {
-        found_streak = true;
-        break;
-      }
-
-    }
-    if (found_streak)
-    {
-      break;
-    }
+  uint32_t r3[32];
+  for (int i =0 ; i < 16; i++){
+    r3[i] = r3[i +16] = center[circle3_[i][1] * sensor_width_ + circle3_[i][0]];
   }
-
-  if (found_streak)
+  if (!hasStreak<16,3,6>(r3))
   {
-    found_streak = false;
-    for (int i=0; i<20; i++)
-    {
-      for (int streak_size = 4; streak_size<=8; streak_size++)
-      {
-        // check that first event is larger than neighbor
-        if (sae_[pol](ex+circle4_[i][0], ey+circle4_[i][1]) <  sae_[pol](ex+circle4_[(i-1+20)%20][0], ey+circle4_[(i-1+20)%20][1]))
-          continue;
-
-        // check that streak event is larger than neighbor
-        if (sae_[pol](ex+circle4_[(i+streak_size-1)%20][0], ey+circle4_[(i+streak_size-1)%20][1]) <          sae_[pol](ex+circle4_[(i+streak_size)%20][0], ey+circle4_[(i+streak_size)%20][1]))
-          continue;
-
-        double min_t = sae_[pol](ex+circle4_[i][0], ey+circle4_[i][1]);
-        for (int j=1; j<streak_size; j++)
-        {
-          const double tj = sae_[pol](ex+circle4_[(i+j)%20][0], ey+circle4_[(i+j)%20][1]);
-          if (tj < min_t)
-            min_t = tj;
-        }
-
-        bool did_break = false;
-        for (int j=streak_size; j<20; j++)
-        {
-          const double tj = sae_[pol](ex+circle4_[(i+j)%20][0], ey+circle4_[(i+j)%20][1]);
-          if (tj >= min_t)
-          {
-            did_break = true;
-            break;
-          }
-        }
-
-        if (!did_break)
-        {
-          found_streak = true;
-          break;
-        }
-      }
-      if (found_streak)
-      {
-        break;
-      }
-    }
+    return false;
   }
-
-  return found_streak;
+  uint32_t r4[40];
+  for (int i =0 ; i < 20; i++){
+    r4[i] = r4[i +20] = center[circle4_[i][1] * sensor_width_ + circle4_[i][0]];
+  }
+  return hasStreak<20,3,6>(r4);
 }
-
 } // namespace

@@ -108,7 +108,7 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << feature.getEventCount() << ","
         << (feature.hasConverged() ? "true" : "false") << ","
         << feature.getWindowSize() << "," 
-        << feature.getIters() << "\n"
+        << feature.getIters() << "," // was "\n" before
         << std::setprecision(3) << wallMs << "," << batchMs << "\n";
 
 
@@ -307,7 +307,9 @@ int main(void) {
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
                 // if (currFeatures[i].getFlow().norm() > 1e-4){
+#ifdef EVIO_VERBOSE //per feature print every batch blocks on the termal : build with -DEVIO_VERBOSE to debug
                     std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
+#endif
                 // }
                     if (currFeatures[i].getHealth() == DEAD) {
 

@@ -27,7 +27,9 @@ public:
 
 private:
   // SAE
-  Eigen::MatrixXd sae_[2];
+  // latest timestamp per pixel, index y*sensor_width + x;
+  // uint_32 matches Event::timestamp type
+  std::vector<uint32_t> sae_[2];
 
   // pixels on circle
   int circle3_[16][2];

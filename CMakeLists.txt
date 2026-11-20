@@ -11,6 +11,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_BUILD_TYPE Release)
+
+# CPU tuning for every target (was only on dvxplore_simple)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+  set(EVIO_ARCH_FLAGS -mcpu = cortex-a78ae)
+else()
+  set(EVIO_ARCH_FLAGS -march=native)
+endif()
 find_package(OpenMP REQUIRED)
 
 

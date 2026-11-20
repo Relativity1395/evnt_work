@@ -57,7 +57,7 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
         double t = event.t();
         if (t < Ti || t >= Ti + dti) return;
         Eigen::Vector2d backProp = event.pos() - (t - Ti) * flow;
-        if ((backProp - position).norm() <= xi) currentEvents.push_back(event);
+        if ((backProp - position).squaredNorm() <= xi * xi) currentEvents.push_back(event); //no sqrt per event
     });
 }
 
@@ -69,7 +69,7 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
         const Event& event = E[idx];
         if (event.t() < Ti) return;
         Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
-        if ((backProp - position).norm() < xi) currentEvents.push_back(event);
+        if ((backProp - position).squaredNorm() < xi * xi) currentEvents.push_back(event);
     });
     return checkInitWindow();
 }
