@@ -27,7 +27,7 @@ find_path(LIBCAER_INCLUDE_DIR NAMES libcaer/libcaer.h
 find_library(LIBCAER_LIB NAMES caer
   PATHS ${CMAKE_SOURCE_DIR}/external/libcaer-prebuilt/lib)
 
-find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui imgcodecs)
 find_path(EIGEN_INCLUDE_DIR NAMES Eigen/Dense PATHS /usr/include/eigen3)
 
 # evio_core algorithm 

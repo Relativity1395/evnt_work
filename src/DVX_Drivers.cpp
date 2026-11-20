@@ -2,6 +2,7 @@
 #include "../third_party/fast_detector.h"
 #include "../include/Feature.hpp"
 #include "../include/OpticalFlow.hpp"
+#include <opencv2/imgcodecs.hpp>
 
 #include <fstream>
 #include <iomanip>
@@ -363,6 +364,9 @@ int main(void) {
             auto now = std::chrono::steady_clock::now();
             if (now - lastDraw >= std::chrono::milliseconds(33)) {
                 static bool gui_ok = true;
+                static int frame_count = 0;
+                if (++frame_count % 10 ==0)
+                    cv::imwrite("/dev/shm/feature.jpg",canvas);
                 if (gui_ok) {
                     try {
                         cv::imshow("Features", canvas);
