@@ -3,12 +3,14 @@
 #include <../third_party/KDTreeVectorOfVectorsAdaptor.h>
 #include <../include/Types.hpp>
 #include <../include/WeightDist.hpp>
+#include <vector>
+#include <limits>
 
 
-#define MAXDELT 1000000
+#define MAXDELT 50000
 #define MIN_EVNT_INIT 100
 #define MIN_EVNT_DEATH 100
-#define MAXITR 1000
+#define MAXITR 20
 #define EPSILON 5
 #define MAX_WINDOW_EVENTS 400
 #define MAXFEAT 10
@@ -50,6 +52,22 @@ struct EventGrid {
     }
 };
 
+struct WindowLog {
+    double windowStart;
+    double windowDuration;
+    double flowX;
+    double flowY;
+    double cost;
+    double flowChangePx;
+    size_t rawEvents;
+    size_t usedEvents;
+    int iterations;
+    int deadCycles;
+    int deathReason;
+    bool converged;
+    int state;
+};
+
 class Feature{
 
 
@@ -62,9 +80,11 @@ class Feature{
         std::vector<Event> previousEvents;
         std::vector<Event> currentEvents;
         Eigen::Vector2d flow;
+        Eigen::Vector2d lastReliableFlow = Eigen::Vector2d::Zero();
         std::vector<Eigen::Vector2d> bProp;
         std::vector<Eigen::Vector2d> landmark;
         std::vector<double> t_flow;
+        std::vector<WindowLog> windowLogs;
         std::vector<std::vector<Association>> weights;
         bool badHealth = false;
         bool converged = false;
@@ -72,6 +92,12 @@ class Feature{
         size_t id;
         int state = 0; //Feature state: INIT/ DEAD/HEALTHY
         int iters = 0;
+
+        size_t rawEventCount = 0;
+        double flowChangePx = std::numeric_limits<double>::quiet_NaN();
+
+        //0 = no reason, 1 = init timeout, 2 = convergence failures, 3 = not enough events, 4 = both 2 and 3
+        int deathReason = 0;
 
 
     public:
@@ -106,7 +132,7 @@ class Feature{
         int checkHealth();
         int getDeadCycles() const;
         double calculateCost();
-        Eigen::Vector2d updateFlow();
+        bool updateFlow();
         bool checkWindow();
         bool checkInitWindow();
         size_t getEventCount() const;
@@ -119,6 +145,16 @@ class Feature{
         double getTi() const {return Ti;}
         void markDead() {badHealth = true;}
 
+        size_t getRawEventCount() const { return rawEventCount; }
+        double getFlowChangePx() const { return flowChangePx; }
+        int getDeathReason() const { return deathReason; }
+
+        void setRawEventCount(size_t n) { rawEventCount = n; }
+        void setFlowChangePx(double value) { flowChangePx = value; }
+        void setDeathReason(int reason) { deathReason = reason; }
+
+        void setCost(double value) { cost = value; }
+
         bool getHealth() const {return badHealth;}
         int getIters() const {return iters;}
         int setIters(bool init){
@@ -129,9 +165,50 @@ class Feature{
             }
             return iters;
         }
+
+        void saveReliableFlow() {
+            lastReliableFlow = flow;
+
+            t_flow.push_back(flow.norm());
+
+            if (t_flow.size() > 5) {
+                t_flow.erase(t_flow.begin());
+            }
+        }
+
+        void restoreReliableFlow() {
+            flow = lastReliableFlow;
+        }
+
+        void recordWindow() {
+            windowLogs.push_back({
+                Ti,
+                dti,
+                flow.x(),
+                flow.y(),
+                cost,
+                flowChangePx,
+                rawEventCount,
+                currentEvents.size(),
+                iters,
+                deadCycles,
+                deathReason,
+                converged,
+                state
+            });
+        }
+
+        const std::vector<WindowLog>& getWindowLogs() const {
+            return windowLogs;
+        }
+
+        void clearWindowLogs() {
+            windowLogs.clear();
+        }
         
     //3D projection
         void featureProjection(); //takes 2D points and projects them into 3D space
+
 
         
 };

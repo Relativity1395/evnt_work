@@ -16,6 +16,7 @@ Feature::Feature(
     this->Ti = Ti;
     this->dti = dti;
     this->xi = xi;
+    this->lastReliableFlow = flow;
 }
 void Feature::updatePosition(double deltaTime) {
     position += flow * deltaTime;
@@ -48,6 +49,7 @@ void Feature::setEvents(){
     bProp.clear();
 }
 void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
+    currentEvents.clear();
     Eigen::Vector2d end = position + dti * flow;
     double x0 = std::min(position.x(), end.x()) - xi, x1 = std::max(position.x(), end.x()) + xi;
     double y0 = std::min(position.y(), end.y()) - xi, y1 = std::max(position.y(), end.y()) + xi;
@@ -64,13 +66,14 @@ void Feature::findEvents(const EventGrid& grid, const std::vector<Event>& E){
 
 
     bool Feature::findEventsInit(const EventGrid& grid, const std::vector<Event>& E){
-    grid.forEachInBox(position.x() - xi, position.y() - xi, position.x() + xi, position.y() + xi, [&](int idx){
-        if (currentEvents.size() >= MIN_EVNT_INIT) return;
-        const Event& event = E[idx];
-        if (event.t() < Ti) return;
-        Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
-        if ((backProp - position).norm() < xi) currentEvents.push_back(event);
-    });
+        currentEvents.clear();
+        grid.forEachInBox(position.x() - xi, position.y() - xi, position.x() + xi, position.y() + xi, [&](int idx){
+            if (currentEvents.size() >= MIN_EVNT_INIT) return;
+            const Event& event = E[idx];
+            if (event.t() < Ti) return;
+            Eigen::Vector2d backProp = event.pos() - (event.t() - Ti) * flow;
+            if ((backProp - position).norm() < xi) currentEvents.push_back(event);
+        });
     return checkInitWindow();
 }
 
@@ -164,6 +167,7 @@ void Feature::generateKD(my_kd_tree_t& tree){
     params.sorted = false;
 
     for (size_t i = 0; i < bProp.size(); i++){
+        matches.clear();
         tree.index->radiusSearch(bProp[i].data(), r2, matches, params);
         double sum = 0.0;
         for (const auto& m : matches){
@@ -243,36 +247,38 @@ double Feature::calculateCost() {
     return cost;
 }
 
-Eigen::Vector2d Feature::updateFlow(){
-    Eigen::Vector2d numerator(0.0,0.0);
-        double denominator = 0.0;
+bool Feature::updateFlow(){
+    Eigen::Vector2d numerator(0.0, 0.0);
+    double denominator = 0.0;
 
-        for(std::size_t k = 0; k < currentEvents.size(); ++k){
-            Eigen::Vector2d xk = currentEvents[k].pos();
-            double tbar = (currentEvents[k].t() - Ti);
+    for(std::size_t k = 0; k < currentEvents.size(); ++k){
+        Eigen::Vector2d xk = currentEvents[k].pos();
+        double tbar = currentEvents[k].t() - Ti;
 
-            // std::cout << tbar << std::endl;
-            // std::cout << Ti << std::endl;
-            // std::cout << currentEvents[k].t() << std::endl;
-            for(const Association& association : weights[k]){
-                double rkj = association.weight;
-                std::size_t j = association.landmarkIndex;
-                Eigen::Vector2d currLandmark = landmark[j];
-                numerator += rkj*(xk - currLandmark) * tbar;
-                denominator += rkj * tbar*tbar;
-            }
+        for(const Association& association : weights[k]){
+            double rkj = association.weight;
+            std::size_t j = association.landmarkIndex;
+            Eigen::Vector2d currLandmark = landmark[j];
+
+            numerator += rkj * (xk - currLandmark) * tbar;
+            denominator += rkj * tbar * tbar;
         }
-        
-        if (denominator <= 1e-12) {
-            return flow;
-        }       
-        Eigen::Vector2d u = numerator/denominator;
-        flow = u;
-        t_flow.push_back(flow.norm());
-        if ((int)t_flow.size() > 5){
-            t_flow.erase(t_flow.begin());
-        }
-        return u;
+    }
+
+    if (denominator <= 1e-12 || !std::isfinite(denominator) ||
+        !numerator.allFinite()) {
+        return false;
+    }
+
+    Eigen::Vector2d u = numerator / denominator;
+
+    if (!u.allFinite()) {
+        return false;
+    }
+
+    flow = u;
+
+    return true;
 }
 
 bool Feature::checkWindow(){

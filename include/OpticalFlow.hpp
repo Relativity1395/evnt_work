@@ -1,7 +1,11 @@
 #include "Feature.hpp"
 #include "../include/Types.hpp"
 #include <stdlib.h>
+#include <atomic>
+#include <limits>
+#include <cmath>
 
+extern std::atomic<int> windowLagWarnings;
 
 
 enum FeatureState {

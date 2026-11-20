@@ -5,7 +5,7 @@
 
 #include <fstream>
 #include <iomanip>
-#include <fstream>
+#include <algorithm>
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -108,11 +108,12 @@ void logFeatureStatus(std::ofstream& logFile, const Feature& feature, double tim
         << feature.getEventCount() << ","
         << (feature.hasConverged() ? "true" : "false") << ","
         << feature.getWindowSize() << "," 
-        << feature.getIters() << "\n"
-        << std::setprecision(3) << wallMs << "," << batchMs << "\n";
-
-
+        << feature.getIters() << ","
+        << std::setprecision(3) << wallMs << "," << batchMs << ","
+        << feature.getDeathReason() << "\n";
 }
+
+
 int main(void) {
 
 #if defined(_WIN32)
@@ -154,6 +155,7 @@ int main(void) {
     cv::Mat canvas(480, 640, CV_8UC3, cv::Scalar(128, 128, 128));
     double highestTimestamp = 0;
     std::vector<Event> currEvents;
+    std::vector<Event> eventHistory;
     std::vector<Feature> currFeatures;
     std::vector<Feature> tempFeatures;
     corner_event_detector::FastDetector detector;
@@ -165,19 +167,31 @@ int main(void) {
     size_t nextFeatureID = 0;
     double lastLogTime = 0;
     const double LOG_INTERVAL = 100;
+
     std::ofstream logFile("feature_status.csv");
+    std::ofstream windowLogFile("feature_windows.csv");
 
-  
-
-    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters,wall_ms,batch_ms\n" << "\n";
-
-    if (!logFile.is_open()) {
-        std::cerr << "Failed to open feature log file!\n";
+    if (!windowLogFile.is_open()) {
+        std::cerr << "Failed to open window log file!\n";
         return 1;
     }
+
+    windowLogFile
+        << "id,window_start,window_duration,flow_x,flow_y,cost,"
+        << "flow_change_px,raw_events,used_events,iterations,"
+        << "dead_cycles,death_reason,converged,state\n";
+
+    
+    if (!logFile.is_open()) {
+    std::cerr << "Failed to open feature log file!\n";
+    return 1;
+    }
+
+    logFile << "id,timestamp,status,px,py,cost,ux,uy,active,events,converged,window_size,iters,wall_ms,batch_ms,death_reason\n";
     
     auto lastDraw = std::chrono::steady_clock::now();
     const auto runStart = lastDraw;
+    static int batchCount = 0;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
@@ -242,41 +256,41 @@ int main(void) {
                     
                     
     
-                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
-    caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-    caerFilterDVSNoiseApply(noiseFilter, polarity);
-    int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+            if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
+                caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+                caerFilterDVSNoiseApply(noiseFilter, polarity);
+                int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
 
-    for (int32_t j = 0; j < eventNum; j++) {
-        Event e;
-        if (!get_event(polarity, j, e)) continue;   // skips events the noise filter removed
-        currEvents.push_back(e);
-        Event& ev = currEvents.back();
+                for (int32_t j = 0; j < eventNum; j++) {
+                    Event e;
+                    if (!get_event(polarity, j, e)) continue;   // skips events the noise filter removed
+                    currEvents.push_back(e);
+                    Event& ev = currEvents.back();
 
-        if (ev.timestamp > highestTimestamp) highestTimestamp = ev.timestamp;
+                    if (ev.timestamp > highestTimestamp) highestTimestamp = ev.timestamp;
 
-        bool feature = detector.isFeature(ev);
-        batchEvents++;
-        evCount++;
-        if (!feature) continue;
-        batchCorners++;
-        detCount++;
+                    bool feature = detector.isFeature(ev);
+                    batchEvents++;
+                    evCount++;
+                    if (!feature) continue;
+                    batchCorners++;
+                    detCount++;
 
-        bool isNew = true;
-        for (const Feature& f : currFeatures) {
-            if ((ev.pos() - f.getPosition()).norm() < minFeatureDist) { isNew = false; break; }
-        }
-        if (isNew && currFeatures.size() < MAXFEAT) {
-            currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
-                                      std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
-            currFeatures.back().setID(nextFeatureID++);
-        }
+                    bool isNew = true;
+                    for (const Feature& f : currFeatures) {
+                        if ((ev.pos() - f.getPosition()).norm() < minFeatureDist) { isNew = false; break; }
+                    }
+                    if (isNew && currFeatures.size() < MAXFEAT) {
+                        currFeatures.emplace_back(ev.pos(), ev.t(), 0.0, std::vector<Event>{},
+                                                std::vector<Event>{}, Eigen::Vector2d(0, 0), 15.0);
+                        currFeatures.back().setID(nextFeatureID++);
+                    }
 
-        cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()),
-                   radius, cv::Scalar(255, 255, 255), thickness);
-    }
-}
+                    cv::circle(canvas, cv::Point(ev.position.x(), ev.position.y()),
+                            radius, cv::Scalar(255, 255, 255), thickness);
                 }
+            }
+        }
             
             
             // std::cout << "Features detected: " << currFeatures.size() << '\n';
@@ -287,29 +301,81 @@ int main(void) {
 
             bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
 
-            grid.build(currEvents);
+            eventHistory.insert(eventHistory.end(), currEvents.begin(), currEvents.end());
+            grid.build(eventHistory);
 
             #pragma omp parallel for schedule(dynamic, 1)
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
+                FeatureCollection(currFeatures[i], grid, eventHistory, epsilon, highestTimestamp);
                 // std::cout << "thread number: " << omp_get_thread_num() << std::endl;
     
             }
+
+            for (Feature& f : currFeatures) {
+                for (const WindowLog& w : f.getWindowLogs()) {
+                    windowLogFile
+                        << f.getID() << ","
+                        << std::fixed << std::setprecision(0)
+                        << w.windowStart << ","
+                        << w.windowDuration << ","
+                        << std::setprecision(10)
+                        << w.flowX << ","
+                        << w.flowY << ","
+                        << w.cost << ","
+                        << w.flowChangePx << ","
+                        << w.rawEvents << ","
+                        << w.usedEvents << ","
+                        << w.iterations << ","
+                        << w.deadCycles << ","
+                        << w.deathReason << ","
+                        << w.converged << ","
+                        << w.state << "\n";
+                }
+
+                f.clearWindowLogs();
+            }
+
+            if (++batchCount % 100 == 0) {
+                std::cout << "Window lag warnings: "
+                        << windowLagWarnings.load(std::memory_order_relaxed)
+                        << std::endl;
+            }
+
+            double maxLag = 0.0;
+            size_t laggedFeatures = 0;
+
+            for (const Feature& f : currFeatures) {
+                if (f.getState() == DEAD || f.getDti() <= 0) continue;
+
+                double lag = highestTimestamp - (f.getTi() + f.getDti());
+
+                if (lag > 0) {
+                    laggedFeatures++;
+                    maxLag = std::max(maxLag, lag);
+                }
+            }
+
+            std::cout << "History events: " << eventHistory.size()
+                    << " | Active features: " << currFeatures.size()
+                    << " | Lagged features: " << laggedFeatures
+                    << " | Max lag: " << maxLag / 1000.0 << " ms"
+                    << std::endl;
+
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             const auto batchEnd = std::chrono::steady_clock::now();
             const double batchMs = std::chrono::duration<double, std::milli>(batchEnd - batchStart).count();
             const double wallMs = std::chrono::duration<double, std::milli>(batchEnd - runStart).count();
             for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                if (shouldLog || currFeatures[i].getHealth() == DEAD) {
+                if (shouldLog || currFeatures[i].getState() == DEAD) {
                     // a feature about to be remove logs as dead otherwise init or alive
-                    int status = currFeatures[i].getHealth() ? DEAD : currFeatures[i].getState();
+                    int status = currFeatures[i].getState();
                     logFeatureStatus(logFile, currFeatures[i], highestTimestamp, currFeatures.size(), status, wallMs, batchMs);
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
                 // if (currFeatures[i].getFlow().norm() > 1e-4){
-                    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
+                    //std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
                 // }
-                    if (currFeatures[i].getHealth() == DEAD) {
+                    if (currFeatures[i].getState() == DEAD) {
 
                     // std::cout << "feature died" << std::endl;
                     currFeatures.erase(currFeatures.begin() + i);
@@ -330,6 +396,41 @@ int main(void) {
                     cv::Scalar(0, 255, 0),
                     1
                 );
+
+                Eigen::Vector2d flow = currFeatures[i].getFlow();
+
+                // show predicted displacement over 20 ms
+                constexpr double ARROW_DT_US = 20000.0;
+                constexpr double MAX_ARROW_PX = 60.0;
+
+                Eigen::Vector2d arrow = flow * ARROW_DT_US;
+
+                if (arrow.allFinite() && arrow.norm() > MAX_ARROW_PX) {
+                    arrow *= MAX_ARROW_PX / arrow.norm();
+                }
+
+                if (arrow.allFinite() && arrow.norm() >= 2.0) {
+                    cv::Point start(
+                        static_cast<int>(std::round(pos.x())),
+                        static_cast<int>(std::round(pos.y()))
+                    );
+
+                    cv::Point end(
+                        static_cast<int>(std::round(pos.x() + arrow.x())),
+                        static_cast<int>(std::round(pos.y() + arrow.y()))
+                    );
+
+                    cv::arrowedLine(
+                        canvas,
+                        start,
+                        end,
+                        cv::Scalar(0, 0, 255),
+                        2,
+                        cv::LINE_AA,
+                        0,
+                        0.25
+                    );
+                }
                 //std::cout << "Flow: "
                 //<< currFeatures[i].getFlow().transpose()
                 //<< '\n';
@@ -346,6 +447,23 @@ int main(void) {
             // caerEventPacketContainerFree(packetContainer);
 
             // cv::imshow("Features", canvas);
+
+            double oldestNeeded = highestTimestamp;
+
+            for (const Feature& f : currFeatures) {
+                oldestNeeded = std::min(oldestNeeded, f.getTi());
+            }
+
+            eventHistory.erase(
+                std::remove_if(
+                    eventHistory.begin(),
+                    eventHistory.end(),
+                    [oldestNeeded](const Event& e) {
+                        return e.t() < oldestNeeded;
+                    }
+                ),
+                eventHistory.end()
+            );
             
             caerEventPacketContainerFree(packetContainer);
             currEvents.clear();
