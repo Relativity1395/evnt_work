@@ -59,10 +59,10 @@ def main():
     # 1. Cost vs. Window ID
     ax = axes[0, 0]
     for fid, group in selected.groupby("id", sort=False):
-        ax.plot(
+        ax.scatter(
             group["window_id"],
             group["cost"],
-            linewidth=1.2,
+            # linewidth=1.2,
             label=f"ID {fid}"
         )
     ax.set(
@@ -113,17 +113,17 @@ def main():
         p90=("flow_mag", lambda x: x.quantile(0.9))
     )
 
-    ax.plot(
+    ax.scatter(
         flow_stats["time"],
         flow_stats["mean"],
         label="Mean"
     )
-    ax.plot(
+    ax.scatter(
         flow_stats["time"],
         flow_stats["median"],
         label="Median"
     )
-    ax.plot(
+    ax.scatter(
         flow_stats["time"],
         flow_stats["p90"],
         label="90th percentile"
