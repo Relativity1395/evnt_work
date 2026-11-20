@@ -10,7 +10,7 @@
 #define MAXDELT 50000
 #define MIN_EVNT_INIT 100
 #define MIN_EVNT_DEATH 100
-#define MAXITR 20
+#define MAXITR 50
 #define EPSILON 5
 #define MAX_WINDOW_EVENTS 400
 #define MAXFEAT 10
