@@ -362,8 +362,16 @@ int main(void) {
             
             auto now = std::chrono::steady_clock::now();
             if (now - lastDraw >= std::chrono::milliseconds(33)) {
-                cv::imshow("Features", canvas);
-                cv::waitKey(1);
+                static bool gui_ok = true;
+                if (gui_ok) {
+                    try {
+                        cv::imshow("Features", canvas);
+                        cv::waitKey(1);
+                    } catch (const cv::Exception&) {
+                        gui_ok = false;
+                        std::cerr << "OpenCV has no gui support\n";
+                    }
+                }
                 canvas.setTo(cv::Scalar(128, 128, 128));
                 lastDraw = now;
             }          
