@@ -341,11 +341,23 @@ int main(void) {
                         << std::endl;
             }
 
+            
             double maxLag = 0.0;
+            double oldestTi = highestTimestamp;
+            double maxWindowMs = 0.0;
             size_t laggedFeatures = 0;
+            size_t initializingFeatures = 0;
 
             for (const Feature& f : currFeatures) {
-                if (f.getState() == DEAD || f.getDti() <= 0) continue;
+                if (f.getState() == DEAD) continue;
+
+                oldestTi = std::min(oldestTi, f.getTi());
+                maxWindowMs = std::max(maxWindowMs, f.getDti() / 1000.0);
+
+                if (f.getDti() <= 0) {
+                    initializingFeatures++;
+                    continue;
+                }
 
                 double lag = highestTimestamp - (f.getTi() + f.getDti());
 
@@ -359,7 +371,11 @@ int main(void) {
                     << " | Active features: " << currFeatures.size()
                     << " | Lagged features: " << laggedFeatures
                     << " | Max lag: " << maxLag / 1000.0 << " ms"
+                    << " | Oldest Ti age: " << (highestTimestamp - oldestTi) / 1000.0 << " ms"
+                    << " | Max window: " << maxWindowMs << " ms"
+                    << " | Initializing: " << initializingFeatures
                     << std::endl;
+
 
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             const auto batchEnd = std::chrono::steady_clock::now();

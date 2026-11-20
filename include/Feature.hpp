@@ -15,7 +15,7 @@
 #define MAX_WINDOW_EVENTS 400
 #define MAXFEAT 10
 //a new feature must collect MIN_EVNT_INT event within this time window to be considered a valid feature
-#define MAX_INT_TIME 500000
+#define MAX_INT_TIME 100000
 // Per-feature state / related events tracking
 typedef KDTreeVectorOfVectorsAdaptor<std::vector<Eigen::Vector2d>, double, 2> my_kd_tree_t;
 using Matches = std::vector<nanoflann::ResultItem<size_t, double>>;

@@ -29,7 +29,7 @@ int FeatureCollection(Feature& F, const EventGrid& grid, const std::vector<Event
         F.findEvents(grid, currEvents);
     }
 
-    constexpr int MAX_WINDOWS_PER_BATCH = 1;
+    constexpr int MAX_WINDOWS_PER_BATCH = 3;
     int windowsProcessed = 0;
 
     while (F.isWindowComplete(highestTimestamp) &&
