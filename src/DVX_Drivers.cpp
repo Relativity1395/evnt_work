@@ -6,6 +6,10 @@
 #include <fstream>
 #include <iomanip>
 #include <fstream>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
 //
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
