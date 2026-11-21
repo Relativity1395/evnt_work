@@ -5,7 +5,6 @@
 
 #include <fstream>
 #include <iomanip>
-#include <fstream>
 
 // static std::atomic<bool> globalShutdown(false);
 static void globalShutdownSignalHandler(int signal) {
@@ -128,12 +127,63 @@ int main(void) {
     if (sigaction(SIGTERM, &shutdownAction, NULL) == -1) return EXIT_FAILURE;
     if (sigaction(SIGINT,  &shutdownAction, NULL) == -1) return EXIT_FAILURE;
 #endif
-
+    const bool IMU_CALIBRATION = false;
+    const bool SHOW_WINDOW = false;
     // Open DVXplorer
     caerDeviceHandle dvxplr_hndl = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
     if (dvxplr_hndl == NULL) return EXIT_FAILURE;
+    caerDeviceSendDefaultConfig(dvxplr_hndl);
+    // Set accelerometer to 400 Hz
+    bool accelOK = caerDeviceConfigSet(
+        dvxplr_hndl,
+        DVX_IMU,
+        DVX_IMU_ACCEL_DATA_RATE,
+        5
+    );
+
+    // Set gyroscope to 400 Hz
+    bool gyroOK = caerDeviceConfigSet(
+        dvxplr_hndl,
+        DVX_IMU,
+        DVX_IMU_GYRO_DATA_RATE,
+        4
+    );
+
+    std::cout << "Accelerometer configured: " << accelOK << "\n";
+    std::cout << "Gyroscope configured: " << gyroOK << "\n";
+
+    // Set packet interval to 5000 microseconds
+    bool success = caerDeviceConfigSet(
+        dvxplr_hndl,
+        CAER_HOST_CONFIG_PACKETS,
+        CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL,
+        5000
+    );
+
+    // Read the interval to confirm
+    uint32_t interval = 0;
+
+    caerDeviceConfigGet(
+        dvxplr_hndl,
+        CAER_HOST_CONFIG_PACKETS,
+        CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL,
+        &interval
+    );
+
+    std::cout << "Configuration successful: " << success << "\n";
+    std::cout << "Packet interval: " << interval << " us\n";
+
+    caerDeviceDataStart(dvxplr_hndl, NULL, NULL, NULL, &usbShutdownHandler, NULL);
+    // Disable DVS events during IMU calibration
+    bool dvsOff = caerDeviceConfigSet(
+        dvxplr_hndl,
+        DVX_DVS,
+        DVX_DVS_RUN,
+        true
+    );
 
     struct caer_dvx_info dvxplr_info = caerDVXplorerInfoGet(dvxplr_hndl);
+
     caerFilterDVSNoise noiseFilter = caerFilterDVSNoiseInitialize(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
     caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE, true);
     caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME, 2000);  // µs
@@ -141,13 +191,12 @@ int main(void) {
     caerFilterDVSNoiseConfigSet(noiseFilter, CAER_FILTER_DVS_REFRACTORY_PERIOD_TIME, 100);     // µs
 
     EventGrid grid(dvxplr_info.dvsSizeX, dvxplr_info.dvsSizeY);
-    printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n",
+    /*printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n",
            dvxplr_info.deviceString, dvxplr_info.deviceID,
            dvxplr_info.deviceIsMaster, dvxplr_info.dvsSizeX,
            dvxplr_info.dvsSizeY, dvxplr_info.firmwareVersion);
-
-    caerDeviceSendDefaultConfig(dvxplr_hndl);
-    caerDeviceDataStart(dvxplr_hndl, NULL, NULL, NULL, &usbShutdownHandler, NULL);
+*/
+    
     caerDeviceConfigSet(dvxplr_hndl, CAER_HOST_CONFIG_DATAEXCHANGE,
                         CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
@@ -166,6 +215,17 @@ int main(void) {
     double lastLogTime = 0;
     const double LOG_INTERVAL = 100;
     std::ofstream logFile("feature_status.csv");
+    std::ofstream imuFile("imu_data400Hz.csv");
+    if (!imuFile.is_open()) {
+        std::cerr << "Failed to open IMU file!\n";
+        return 1;
+}
+
+    imuFile << "timestamp,accel_x,accel_y,accel_z,"
+            "gyro_x,gyro_y,gyro_z,temperature\n";
+
+    imuFile << std::setprecision(10);
+    
 
   
 
@@ -178,10 +238,24 @@ int main(void) {
     
     auto lastDraw = std::chrono::steady_clock::now();
     const auto runStart = lastDraw;
+    int64_t previousTimestamp = -1;
+
+    int duplicateInside = 0;
+    int duplicateBetween = 0;
+
+    int gapInside = 0;
+    int gapBetween = 0;
     while (!globalShutdown.load(std::memory_order_relaxed)) {
             int batchEvents = 0;
             int batchCorners = 0;
+            if(!IMU_CALIBRATION){
+
             canvas.setTo(cv::Scalar(128, 128, 128));
+            }
+            if (std::chrono::steady_clock::now() - runStart
+                >= std::chrono::seconds(60)) {
+                break;
+            }
             caerEventPacketContainer packetContainer = caerDeviceDataGet(dvxplr_hndl);
             if (packetContainer == NULL) {
                 // if (cv::waitKey(1) == 27) globalShutdown.store(true);  // ESC
@@ -203,6 +277,15 @@ int main(void) {
                 if (caerEventPacketHeaderGetEventType(packetHeader) == IMU6_EVENT){
                     caerIMU6EventPacket imuPacket = caerIMU6EventPacketFromPacketHeader(packetHeader);
                     int32_t imuEventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
+                    static int packetCount = 0;
+
+                    if (packetCount < 20) {
+                        std::cout << "IMU packet " << packetCount
+                                << " contains " << imuEventNum
+                                << " events\n";
+                    }
+
+                    packetCount++;
                     for(int32_t j = 0; j < imuEventNum; j++){
                         //getting each event one by one in the packet
                         caerIMU6Event imuEvent = caerIMU6EventPacketGetEvent(imuPacket, j);
@@ -212,6 +295,36 @@ int main(void) {
                         }
                         imu_t imu;
                         imu.t = caerIMU6EventGetTimestamp64(imuEvent, imuPacket);
+                        if (previousTimestamp >= 0) {
+                        int64_t dt = imu.t - previousTimestamp;
+                        static int printed = 0;
+
+                        if ((dt == 0 || dt > 5000) && printed < 30) {
+                            std::cout << "Event index: " << j
+                                    << " / " << imuEventNum
+                                    << " | dt: " << dt
+                                    << " us"
+                                    << " | timestamp: " << imu.t
+                                    << "\n";
+
+                            printed++;
+                        }
+                        if (dt == 0) {
+                            if (j == 0)
+                                duplicateBetween++;
+                            else
+                                duplicateInside++;
+                        }
+
+                        if (dt > 5000) {
+                            if (j == 0)
+                                gapBetween++;
+                            else
+                                gapInside++;
+                        }
+                    }
+
+                    previousTimestamp = imu.t;
 
                         //setting accel values
                         imu.accel_x = caerIMU6EventGetAccelX(imuEvent);
@@ -224,6 +337,14 @@ int main(void) {
                         imu.gyro_z = caerIMU6EventGetGyroZ(imuEvent);
 
                         imu.temperature = caerIMU6EventGetTemp(imuEvent);
+                        imuFile << imu.t << ","
+                        << imu.accel_x << ","
+                        << imu.accel_y << ","
+                        << imu.accel_z << ","
+                        << imu.gyro_x << ","
+                        << imu.gyro_y << ","
+                        << imu.gyro_z << ","
+                        << imu.temperature << "\n";
                         //printing the event 
                         // std::cout
                         // << "ACCEL: "
@@ -242,7 +363,7 @@ int main(void) {
                     
                     
     
-                if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT) {
+    if (caerEventPacketHeaderGetEventType(packetHeader) == POLARITY_EVENT && !IMU_CALIBRATION) {
     caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
     caerFilterDVSNoiseApply(noiseFilter, polarity);
     int32_t eventNum = caerEventPacketHeaderGetEventNumber(packetHeader);
@@ -284,17 +405,18 @@ int main(void) {
             //     << " | eFAST corners: " << batchCorners
             //     << " | Active features: " << currFeatures.size()
             //     << std::endl;
+            if(!IMU_CALIBRATION){
+                bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
+            
+                grid.build(currEvents);
 
-            bool shouldLog = (highestTimestamp - lastLogTime >= LOG_INTERVAL);
-
-            grid.build(currEvents);
-
-            #pragma omp parallel for schedule(dynamic, 1)
-            for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
-                FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
-                // std::cout << "thread number: " << omp_get_thread_num() << std::endl;
-    
-            }
+                #pragma omp parallel for schedule(dynamic, 1)
+                for (int i = 0; i < static_cast<int>(currFeatures.size()); i++) {
+                    FeatureCollection(currFeatures[i], grid, currEvents, epsilon, highestTimestamp);
+                    // std::cout << "thread number: " << omp_get_thread_num() << std::endl;
+        
+                }
+            
                 //std::cout << "FeatureCollection returned: " << result << '\n';
             const auto batchEnd = std::chrono::steady_clock::now();
             const double batchMs = std::chrono::duration<double, std::milli>(batchEnd - batchStart).count();
@@ -307,7 +429,7 @@ int main(void) {
                 }
                 // std::cout << currFeatures[i].getWindowSize() << std::endl;
                 // if (currFeatures[i].getFlow().norm() > 1e-4){
-                    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
+                //    std::cout << "ID: " << currFeatures[i].getID()<< " x position: " << currFeatures[i].getPosition().x() << " y position: " << currFeatures[i].getPosition().y() << " NumDeadCycles: " << currFeatures[i].getDeadCycles() << " COST: " << currFeatures[i].getCost() << " Window Size: " << currFeatures[i].getWindowSize() << std::endl;
                 // }
                     if (currFeatures[i].getHealth() == DEAD) {
 
@@ -347,8 +469,6 @@ int main(void) {
 
             // cv::imshow("Features", canvas);
             
-            caerEventPacketContainerFree(packetContainer);
-            currEvents.clear();
 
 // Draw all stored features as green circles
             // for (Feature& f : currFeatures) {
@@ -357,16 +477,19 @@ int main(void) {
             // }
 
             // // Display camera output
-            
-            auto now = std::chrono::steady_clock::now();
-            if (now - lastDraw >= std::chrono::milliseconds(33)) {
-                cv::imshow("Features", canvas);
-                cv::waitKey(1);
-                canvas.setTo(cv::Scalar(128, 128, 128));
-                lastDraw = now;
-            }          
+            if(!IMU_CALIBRATION && SHOW_WINDOW){    
+                auto now = std::chrono::steady_clock::now();
+                if (now - lastDraw >= std::chrono::milliseconds(33)) {
+                    cv::imshow("Features", canvas);
+                    cv::waitKey(1);
+                    canvas.setTo(cv::Scalar(128, 128, 128));
+                    lastDraw = now;
+                }    
+            }      
             
         }     
+        caerEventPacketContainerFree(packetContainer);
+        currEvents.clear();
 
     // std::vector<int> temp;
     // for (int i = 0; i < (int)currFeatures.size(); i++){
@@ -386,10 +509,22 @@ int main(void) {
     // fade the whole canvas toward black so old corners decay
     // canvas *= 0.90;
 
+    }
+    std::cout << "Duplicates inside packets: "
+          << duplicateInside << "\n";
 
+    std::cout << "Duplicates between packets: "
+            << duplicateBetween << "\n";
+
+    std::cout << "Large gaps inside packets: "
+            << gapInside << "\n";
+
+    std::cout << "Large gaps between packets: "
+            << gapBetween << "\n";
     caerDeviceDataStop(dvxplr_hndl);
     caerFilterDVSNoiseDestroy(noiseFilter);
     caerDeviceClose(&dvxplr_hndl);
+    imuFile.close();
     // cv::destroyAllWindows();
     printf("Shutdown successful.\n");
     return EXIT_SUCCESS;

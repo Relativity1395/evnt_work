@@ -43,7 +43,9 @@ target_include_directories(evio_core PUBLIC
   third_party/
   ${EIGEN_INCLUDE_DIR}
   ${LIBCAER_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
 )
+target_link_libraries(evio_core PUBLIC ${OpenCV_LIBS})
 
 # dvxplore_simple
 add_executable(dvxplore_simple

@@ -18,6 +18,7 @@ void StateVector::propagate(const imu_t& imu, double dt){
     Eigen::Vector3d w(imu.gyro_x, imu.gyro_y, imu.gyro_z);
     a -= accelBias;
     w -= gyroBias;
+    Eigen::Vector3d g(0.0,0.0,-9.81);
     Eigen::Vector4d q0(q.x(),q.y(),q.z(),q.w()); 
     Eigen::Vector3d v0 = velocity;
     Eigen::Vector3d p0 = position;
@@ -103,14 +104,9 @@ void StateVector::initialize(const std::vector<imu_t>& imu_buffer){
     }
     gyroBias = w_sum/imu_buffer.size();
     Eigen::Vector3d accel_avg = accel_sum/imu_buffer.size();
-    Eigen::Vector3d g_world = (0.0,0.0,1.0);
-    Eigen::Vector3d g = (0.0,0.0,-9.81);
+    Eigen::Vector3d g_world(0.0, 0.0, 1.0);
+    Eigen::Vector3d g(0.0, 0.0, -9.81);
     q = Eigen::Quaterniond::FromTwoVectors(accel_avg.normalized(), g_world);
     accelBias = accel_avg + q.conjugate() * g;
 
-}
-static StateVector::Eigen::Vector4d quad_derivative(const Eigen::Quatterniond& q, const Eigen::Vector3d* w){
-    Eigen::Quaterniond w_Quaterniond(0,w.x(),w.y(),w,z());
-    Eigen::Quaterniond dq = w_Quaterniond * q;
-    return 0.5* Eigen::Vector4d(dq.x(),dq.y(),dq.z(),dq.w());
 }
